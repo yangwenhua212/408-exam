@@ -22,7 +22,8 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHashHistory(), // 关键：改成Hash模式
+  // 关键：传入base参数，和vite.config.js的base保持一致
+  history: createWebHashHistory('/408-exam/'), 
   routes
 })
 
