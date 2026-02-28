@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>408题库管理后台</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f5f7fa; padding: 2rem; }
+    .container { max-width: 1000px; margin: 0 auto; }
+    h1 { color: #333; margin-bottom: 1.5rem; text-align: center; }
+    .nav { display: flex; gap: 1rem; margin-bottom: 2rem; justify-content: center; }
+    .nav button { padding: 0.8rem 1.5rem; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; }
+    .nav .active { background: #667eea; color: white; }
+    .nav .inactive { background: white; color: #666; }
+
+    /* 添加题目表单 */
+    .form-card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 2rem; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500; }
+    input, select, textarea { width: 100%; padding: 0.8rem; border: 1px solid #e8e8e8; border-radius: 6px; font-size: 1rem; }
+    textarea { resize: vertical; min-height: 80px; }
+    .options-group { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .btn-submit { width: 100%; padding: 1rem; background: #667eea; color: white; border: none; border-radius: 8px; font-size: 1.1rem; cursor: pointer; margin-top: 1rem; }
+    .btn-submit:hover { background: #5568d3; }
+
+    /* 题目列表 */
+    .question-list { display: flex; flex-direction: column; gap: 1rem; }
+    .question-item { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+    .question-header { display: flex; justify-content: space-between; margin-bottom: 1rem; }
+    .question-tag { background: #667eea15; color: #667eea; padding: 0.3rem 0.8rem; border-radius: 4px; font-size: 0.9rem; }
+    .btn-delete { background: #fff2f0; color: #ff4d4f; border: 1px solid #ffccc7; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; }
+    .btn-delete:hover { background: #ff4d4f; color: white; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📝 408题库管理后台</h1>
+    
+    <div class="nav">
+      <button id="tabAdd" class="active" onclick="switchTab('add')">添加题目</button>
+      <button id="tabList" class="inactive" onclick="switchTab('list')">题目列表</button>
+    </div>
+
+    <!-- 添加题目表单 -->
+    <div id="addSection">
+      <div class="form-card">
+        <div class="form-row">
+          <div class="form-group">
+            <label>年份</label>
+            <input type="number" id="year" placeholder="例如：2025">
+          </div>
+          <div class="form-group">
+            <label>科目</label>
+            <select id="subject">
+              <option value="数据结构">数据结构</option>
+              <option value="计算机组成原理">计算机组成原理</option>
+              <option value="操作系统">操作系统</option>
+              <option value="计算机网络">计算机网络</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>题干</label>
+          <textarea id="question" placeholder="请输入题目内容"></textarea>
+        </div>
+        <div class="options-group">
+          <div class="form-group">
+            <label>选项A</label>
+            <input type="text" id="optionA" placeholder="选项A内容">
+          </div>
+          <div class="form-group">
+            <label>选项B</label>
+            <input type="text" id="optionB" placeholder="选项B内容">
+          </div>
+          <div class="form-group">
+            <label>选项C</label>
+            <input type="text" id="optionC" placeholder="选项C内容">
+          </div>
+          <div class="form-group">
+            <label>选项D</label>
+            <input type="text" id="optionD" placeholder="选项D内容">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>正确答案</label>
+            <select id="answer">
+              <option value="A">A</option>
+              <option value="B">B</option>
+              <option value="C">C</option>
+              <option value="D">D</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>难度</label>
+            <select id="difficulty">
+              <option value="简单">简单</option>
+              <option value="中等">中等</option>
+              <option value="困难">困难</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>答案解析</label>
+          <textarea id="analysis" placeholder="请输入答案解析"></textarea>
+        </div>
+        <button class="btn-submit" onclick="addQuestion">✅ 添加题目</button>
+      </div>
+    </div>
+
+    <!-- 题目列表 -->
+    <div id="listSection" style="display: none;">
+      <div class="question-list" id="questionList"></div>
+    </div>
+  </div>
+
+  <script>
+    const API = '/api/questions'
+
+    // 切换标签
+    function switchTab(tab) {
+      document.getElementById('addSection').style.display = tab === 'add' ? 'block' : 'none'
+      document.getElementById('listSection').style.display = tab === 'list' ? 'block' : 'none'
+      document.getElementById('tabAdd').className = tab === 'add' ? 'active' : 'inactive'
+      document.getElementById('tabList').className = tab === 'list' ? 'active' : 'inactive'
+      if (tab === 'list') loadQuestions()
+    }
+
+    // 添加题目
+    async function addQuestion() {
+      const question = {
+        year: document.getElementById('year').value,
+        subject: document.getElementById('subject').value,
+        question: document.getElementById('question').value,
+        options: [
+          'A. ' + document.getElementById('optionA').value,
+          'B. ' + document.getElementById('optionB').value,
+          'C. ' + document.getElementById('optionC').value,
+          'D. ' + document.getElementById('optionD').value
+        ],
+        answer: document.getElementById('answer').value,
+        analysis: document.getElementById('analysis').value,
+        difficulty: document.getElementById('difficulty').value
+      }
+
+      if (!question.question || !document.getElementById('optionA').value) {
+        alert('请填写完整题目和选项！')
+        return
+      }
+
+      try {
+        const res = await fetch(API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(question)
+        })
+        await res.json()
+        alert('✅ 添加成功！')
+        // 清空表单
+        document.querySelectorAll('input, textarea').forEach(el => el.value = '')
+      } catch (err) {
+        alert('添加失败：' + err.message)
+      }
+    }
+
+    // 加载题目列表
+    async function loadQuestions() {
+      const res = await fetch(API)
+      const questions = await res.json()
+      const list = document.getElementById('questionList')
+      list.innerHTML = questions.map(q => `
+        <div class="question-item">
+          <div class="question-header">
+            <span class="question-tag">${q.year}年 | ${q.subject} | ${q.difficulty}</span>
+            <button class="btn-delete" onclick="deleteQuestion(${q.id})">删除</button>
+          </div>
+          <div style="color: #333; font-weight: 500; margin-bottom: 0.5rem;">${q.question}</div>
+          <div style="color: #666; font-size: 0.9rem;">正确答案：${q.answer}</div>
+        </div>
+      `).join('')
+    }
+
+    // 删除题目
+    async function deleteQuestion(id) {
+      if (!confirm('确定要删除这道题吗？')) return
+      await fetch(`${API}/${id}`, { method: 'DELETE' })
+      alert('✅ 删除成功！')
+      loadQuestions()
+    }
+  </script>
+</body>
+</html>
