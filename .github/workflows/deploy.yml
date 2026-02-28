@@ -1,36 +1,32 @@
-name: Deploy to GitHub Pages # 工作流名称
+name: Deploy to GitHub Pages
 
-on: # 触发条件
+on:
   push:
     branches: [main]
-  workflow_dispatch:
 
-jobs: # 任务集合
-  deploy: # 部署任务
-    runs-on: ubuntu-latest # 运行环境
-    steps: # 任务步骤（重点看这里）
-      # 步骤1：拉取仓库代码
-      - name: Checkout code
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      # 步骤2：配置 Node.js（你要修改的就是这里！）
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20" # 核心修改：指定20版本
-          cache: "npm" # 可选缓存，加速依赖安装
+          node-version: 20
+          cache: "npm"
 
-      # 步骤3：安装项目依赖
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      # 步骤4：构建项目
-      - name: Build project
+      - name: Build
         run: npm run build
 
-      # 步骤5：部署到 GitHub Pages
       - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          folder: dist
-          branch: gh-pages
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
