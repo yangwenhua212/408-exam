@@ -99,8 +99,20 @@ async function createTables() {
     user_answer VARCHAR(10) NOT NULL,
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
+    FOREIG
+    N KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
   )`)
+
+  // 确保 users 表的 avatar 字段为 LONGTEXT（解决 Data too long 问题）
+try {
+  await dbPool.execute(`
+    ALTER TABLE users MODIFY avatar LONGTEXT
+  `);
+  console.log('✅ 已确保 users.avatar 字段为 LONGTEXT');
+} catch (err) {
+  // 如果表不存在或其他错误，忽略（建表语句会处理）
+  console.log('⚠️ 检查 avatar 字段时出现非致命错误:', err.message);
+}
 }
 
 // ---------------- 用户接口 ----------------
