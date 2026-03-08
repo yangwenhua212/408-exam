@@ -54,7 +54,6 @@ async function initDBPool() {
   }
 }
 
-// 自动创建所有表
 async function createTables() {
   // 题目表
   await dbPool.execute(`CREATE TABLE IF NOT EXISTS questions (
@@ -67,15 +66,15 @@ async function createTables() {
     analysis TEXT,
     difficulty VARCHAR(50),
     type VARCHAR(50) DEFAULT '真题'
-  )`)
+  )`);
 
   // 管理员表
   await dbPool.execute(`CREATE TABLE IF NOT EXISTS admins (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(255) UNIQUE,
     password VARCHAR(255)
-  )`)
-  await dbPool.execute(`INSERT IGNORE INTO admins (username, password) VALUES (?, ?)`, ['admin', '123456'])
+  )`);
+  await dbPool.execute(`INSERT IGNORE INTO admins (username, password) VALUES (?, ?)`, ['admin', '123456']);
 
   // 用户表
   await dbPool.execute(`CREATE TABLE IF NOT EXISTS users (
@@ -88,9 +87,9 @@ async function createTables() {
     location VARCHAR(255),
     avatar LONGTEXT,
     registerTime VARCHAR(255)
-  )`)
+  )`);
 
-  // 错题表
+  // 错题表（已修正语法错误）
   await dbPool.execute(`CREATE TABLE IF NOT EXISTS user_errors (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -99,20 +98,17 @@ async function createTables() {
     user_answer VARCHAR(10) NOT NULL,
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIG
-    N KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
-  )`)
+    FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
+  )`);
 
-  // 确保 users 表的 avatar 字段为 LONGTEXT（解决 Data too long 问题）
-try {
-  await dbPool.execute(`
-    ALTER TABLE users MODIFY avatar LONGTEXT
-  `);
-  console.log('✅ 已确保 users.avatar 字段为 LONGTEXT');
-} catch (err) {
-  // 如果表不存在或其他错误，忽略（建表语句会处理）
-  console.log('⚠️ 检查 avatar 字段时出现非致命错误:', err.message);
-}
+  // 自动修复 avatar 字段类型（解决 Data too long 问题）
+  try {
+    await dbPool.execute(`ALTER TABLE users MODIFY avatar LONGTEXT`);
+    console.log('✅ 已确保 users.avatar 字段为 LONGTEXT');
+  } catch (err) {
+    // 如果表不存在或其他错误，忽略
+    console.log('⚠️ 检查 avatar 字段时出现非致命错误:', err.message);
+  }
 }
 
 // ---------------- 用户接口 ----------------
