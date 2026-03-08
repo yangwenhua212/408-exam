@@ -1,6 +1,5 @@
 <template>
   <div class="user-home">
-    <!-- 顶部导航栏 -->
     <header class="header">
       <div class="header-container">
         <h1 class="page-title">个人主页</h1>
@@ -12,9 +11,7 @@
       </div>
     </header>
 
-    <!-- 主体内容：只保留左侧用户信息，删除右侧功能卡片 -->
     <main class="main-container">
-      <!-- 左侧：用户信息卡片（完全保留） -->
       <div class="left-section">
         <div class="user-info-card">
           <div class="cover-bg"></div>
@@ -29,11 +26,9 @@
           </div>
         </div>
       </div>
-
-      <!-- 右侧功能卡片已完全删除 -->
     </main>
 
-    <!-- 编辑资料模态框（完全保留） -->
+    <!-- 编辑资料模态框 -->
     <div v-if="showEditModal" class="modal-mask" @click.self="showEditModal = false">
       <div class="modal-content">
         <div class="modal-header">
@@ -53,9 +48,17 @@
             <label>所在地</label>
             <input v-model="editForm.location" type="text" class="form-input" placeholder="例如：广西·百色">
           </div>
+          <!-- 头像上传区域 -->
           <div class="form-item">
-            <label>头像链接</label>
-            <input v-model="editForm.avatar" type="text" class="form-input" placeholder="输入图片URL（可选）">
+            <label>头像</label>
+            <div class="avatar-upload">
+              <img :src="editForm.avatar || 'https://picsum.photos/200/200'" class="preview-avatar" />
+              <div class="upload-controls">
+                <input v-model="editForm.avatar" type="text" class="form-input" placeholder="输入图片URL（可选）">
+                <button type="button" @click="triggerFileUpload" class="btn-upload">从相册上传</button>
+                <input ref="fileInput" type="file" accept="image/*" @change="handleFileUpload" style="display: none;">
+              </div>
+            </div>
           </div>
         </div>
         <div class="modal-footer">
@@ -73,8 +76,8 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const showEditModal = ref(false)
+const fileInput = ref(null)
 
-// 用户信息
 const userInfo = reactive({
   username: '',
   bio: '',
@@ -82,7 +85,6 @@ const userInfo = reactive({
   avatar: ''
 })
 
-// 编辑表单
 const editForm = reactive({
   username: '',
   bio: '',
@@ -94,7 +96,6 @@ onMounted(() => {
   loadUserInfo()
 })
 
-// 读取用户信息
 const loadUserInfo = () => {
   const user = localStorage.getItem('currentUser')
   if (user) {
@@ -112,31 +113,61 @@ const loadUserInfo = () => {
   }
 }
 
-// 保存用户信息
-const saveUserInfo = () => {
+const triggerFileUpload = () => {
+  fileInput.value.click()
+}
+
+const handleFileUpload = (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+  if (!file.type.startsWith('image/')) {
+    alert('请选择图片文件')
+    return
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    alert('图片大小不能超过 2MB')
+    return
+  }
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    editForm.avatar = e.target.result
+  }
+  reader.readAsDataURL(file)
+  event.target.value = ''
+}
+
+// 修改为异步更新后端
+const saveUserInfo = async () => {
   if (!editForm.username.trim()) {
     alert('用户名不能为空！')
     return
   }
 
-  const oldUser = JSON.parse(localStorage.getItem('currentUser') || '{}')
-  const newUser = {
-    ...oldUser,
-    username: editForm.username,
-    bio: editForm.bio,
-    location: editForm.location,
-    avatar: editForm.avatar
-  }
+  try {
+    const res = await fetch('/api/user/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editForm)
+    })
 
-  localStorage.setItem('currentUser', JSON.stringify(newUser))
-  Object.assign(userInfo, newUser)
-  showEditModal.value = false
-  alert('保存成功！')
+    if (!res.ok) {
+      const error = await res.json()
+      alert(error.error || '更新失败')
+      return
+    }
+
+    // 更新 localStorage 和本地 userInfo
+    const oldUser = JSON.parse(localStorage.getItem('currentUser') || '{}')
+    const newUser = { ...oldUser, ...editForm }
+    localStorage.setItem('currentUser', JSON.stringify(newUser))
+    Object.assign(userInfo, newUser)
+    showEditModal.value = false
+    alert('保存成功！')
+  } catch (err) {
+    alert('更新失败，请检查网络或后端是否启动')
+  }
 }
 
-// 删除了右侧卡片的跳转函数（goToExam/goToErrorBook/goToStats）
-
-// 退出登录
 const handleLogout = () => {
   localStorage.removeItem('currentUser')
   router.push('/')
@@ -144,14 +175,11 @@ const handleLogout = () => {
 </script>
 
 <style scoped>
-/* 全局容器 */
 .user-home {
   min-height: 100vh;
   background-color: #f5f7fa;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
-
-/* 顶部导航栏 */
 .header {
   background: #fff;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
@@ -189,22 +217,18 @@ const handleLogout = () => {
 .logout-btn:hover {
   color: #ff4d4f;
 }
-
-/* 主体容器：只保留左侧，删除右侧布局 */
 .main-container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
   display: flex;
-  justify-content: center; /* 居中显示用户卡片 */
+  justify-content: center;
 }
-
-/* 左侧：用户信息卡片（样式完全保留） */
 .left-section {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  width: 380px; /* 固定宽度，居中显示 */
+  width: 380px;
 }
 .user-info-card {
   width: 100%;
@@ -266,7 +290,7 @@ const handleLogout = () => {
   margin: 0.5rem 0;
 }
 
-/* 模态框样式（完全保留） */
+/* 模态框样式 */
 .modal-mask {
   position: fixed;
   top: 0;
@@ -335,6 +359,36 @@ const handleLogout = () => {
 .form-input:focus, .form-textarea:focus {
   border-color: #667eea;
 }
+.avatar-upload {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.preview-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 10px;
+  border: 2px solid #667eea;
+}
+.upload-controls {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+.btn-upload {
+  padding: 0.6rem 1rem;
+  background: #f5f5f5;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 0.9rem;
+}
+.btn-upload:hover {
+  background: #e8e8e8;
+}
 .modal-footer {
   padding: 1rem 1.5rem;
   border-top: 1px solid #f0f0f0;
@@ -365,8 +419,6 @@ const handleLogout = () => {
 .btn-save:hover {
   background: #5568d3;
 }
-
-/* 响应式适配（调整居中显示） */
 @media (max-width: 768px) {
   .header-container {
     padding: 1rem;
@@ -381,7 +433,7 @@ const handleLogout = () => {
     padding: 1rem;
   }
   .left-section {
-    width: 100%; /* 移动端占满宽度 */
+    width: 100%;
   }
 }
 </style>

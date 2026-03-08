@@ -4,22 +4,24 @@
     <header class="exam-header">
       <router-link to="/" class="back-btn">← 返回首页</router-link>
       <div class="exam-info">
-        <span>408考研真题刷题</span>
-        <!-- 科目筛选器 -->
-        <div class="filter-group">
-          <select v-model="selectedSubject" @change="loadQuestions" class="filter-select">
+        <span>刷题</span>
+        <!-- 科目筛选器（动态加载） -->
+        <div class="filter-group" v-if="showSubjectFilter">
+          <select v-model="selectedSubject" class="filter-select">
             <option value="">全部科目</option>
-            <option value="数据结构">数据结构</option>
-            <option value="计算机组成原理">计算机组成原理</option>
-            <option value="操作系统">操作系统</option>
-            <option value="计算机网络">计算机网络</option>
+            <option v-for="sub in subjects" :key="sub" :value="sub">{{ sub }}</option>
           </select>
         </div>
       </div>
     </header>
 
+    <!-- 加载中提示 -->
+    <main class="exam-main" v-if="loading">
+      <div class="loading-box">加载题目中，请稍候...</div>
+    </main>
+
     <!-- 题目主体区域 -->
-    <main class="exam-main" v-if="questionList.length > 0">
+    <main class="exam-main" v-else-if="questionList.length > 0">
       <div class="question-card">
         <!-- 题目信息 -->
         <div class="question-header">
@@ -85,125 +87,173 @@
 
     <!-- 空数据提示 -->
     <div class="empty-box" v-else>
-      <h3>该科目下暂无自定义题，请先在后台添加</h3>
+      <h3>该科目下暂无题目，请先在后台添加或切换科目</h3>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/userStore'
 
+const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
+
+// 判断当前模式：normal 普通刷题，error 错题刷题
+const mode = ref(route.query.mode || 'normal')
+
+// 是否显示科目筛选器（普通模式显示，错题模式隐藏）
+const showSubjectFilter = computed(() => mode.value !== 'error')
 
 // 核心数据
-const questionList = ref([]) // 所有自定义题列表
-const currentIndex = ref(0) // 当前题目索引
-const userAnswer = ref('') // 用户选中的答案
-const isSubmitted = ref(false) // 是否提交答案
-const selectedSubject = ref('') // 选中的科目
+const questionList = ref([])
+const currentIndex = ref(0)
+const userAnswer = ref('')
+const isSubmitted = ref(false)
+const selectedSubject = ref('')
+const subjects = ref([])
+const loading = ref(false)
 
 // 计算当前题目
 const currentQuestion = computed(() => {
   return questionList.value[currentIndex.value] || {}
 })
 
-// 从后端获取题目（只加载自定义题，支持科目筛选）
-const loadQuestions = async () => {
+// ---------- 数据加载 ----------
+// 加载科目列表（仅普通模式需要，但为了简单始终加载，不影响错题模式）
+const loadSubjects = async () => {
   try {
-    // 核心修改：默认只加载「自定义题」
-    let url = '/api/questions?type=自定义题'
-    // 如果选了科目，拼接查询参数（注意用 & 而不是 ?）
-    if (selectedSubject.value) {
-      url += `&subject=${encodeURIComponent(selectedSubject.value)}`
+    const res = await fetch('/api/subjects')
+    if (!res.ok) throw new Error('加载科目列表失败')
+    subjects.value = await res.json()
+  } catch (err) {
+    console.error(err)
+    // 降级为默认科目
+    subjects.value = ['数据结构', '计算机组成原理', '操作系统', '计算机网络']
+  }
+}
+
+// 加载题目
+const loadQuestions = async () => {
+  loading.value = true
+  try {
+    let url
+    if (mode.value === 'error') {
+      // 错题模式：需要用户ID
+      if (!userStore.user?.id) {
+        alert('请先登录')
+        router.push('/login')
+        return
+      }
+      url = `/api/user/errors/questions?userId=${userStore.user.id}`
+    } else {
+      // 普通模式
+      url = '/api/questions?type=自定义题'
+      if (selectedSubject.value) {
+        url += `&subject=${encodeURIComponent(selectedSubject.value)}`
+      }
     }
-    
     const res = await fetch(url)
+    if (!res.ok) throw new Error('加载题目失败')
     questionList.value = await res.json()
-    
-    // 切换科目后，重置答题状态
+    // 重置状态
     currentIndex.value = 0
     userAnswer.value = ''
     isSubmitted.value = false
   } catch (err) {
-    console.error('题目数据加载失败：', err)
-    alert('题目数据加载失败，请确保后端已启动')
+    console.error(err)
+    alert('题目加载失败，请稍后重试')
+  } finally {
+    loading.value = false
   }
 }
 
-// 页面加载时获取题目数据
-onMounted(async () => {
-  await loadQuestions()
+// ---------- 路由同步 ----------
+// 从 URL 初始化科目（仅普通模式有效，错题模式不监听）
+watch(
+  () => route.query.subject,
+  (newSubject) => {
+    if (mode.value !== 'error' && newSubject !== undefined && newSubject !== selectedSubject.value) {
+      selectedSubject.value = newSubject || ''
+    }
+  },
+  { immediate: true }
+)
+
+// 科目变化时重新加载题目（仅普通模式）
+watch(selectedSubject, (newVal) => {
+  if (mode.value !== 'error') {
+    router.replace({ query: { subject: newVal || undefined } })
+    loadQuestions()
+  }
 })
 
-// 选择选项
+// 监听 mode 变化（例如从错题本跳转时），重新加载题目
+watch(mode, () => {
+  loadQuestions()
+})
+
+// ---------- 答题逻辑 ----------
 const selectOption = (optionKey) => {
-  if (isSubmitted.value) return // 提交后不能再选
+  if (isSubmitted.value) return
   userAnswer.value = optionKey
 }
 
-// 提交答案
 const submitAnswer = () => {
   isSubmitted.value = true
-
-  // 答错的题，自动加入错题本
   if (userAnswer.value !== currentQuestion.value.answer) {
     addToErrorBook()
   }
 }
 
-// 上一题
 const prevQuestion = () => {
   if (currentIndex.value === 0) return
   currentIndex.value--
-  // 重置答题状态
   resetQuestionState()
 }
 
-// 下一题
 const nextQuestion = () => {
   if (currentIndex.value === questionList.value.length - 1) {
     alert('已经是最后一题啦！')
     return
   }
   currentIndex.value++
-  // 重置答题状态
   resetQuestionState()
 }
 
-// 重置单题状态
 const resetQuestionState = () => {
   userAnswer.value = ''
   isSubmitted.value = false
 }
 
-// 加入错题本（和你现有错题本功能联动）
-const addToErrorBook = () => {
-  // 获取当前登录用户
-  const currentUser = localStorage.getItem('currentUser')
-  if (!currentUser) return
-
-  const username = JSON.parse(currentUser).username
-  // 错题本key：按用户名区分，多用户隔离
-  const errorBookKey = `errorBook_${username}`
-  
-  // 获取已有的错题
-  const oldErrorList = JSON.parse(localStorage.getItem(errorBookKey) || '[]')
-  
-  // 去重：已经在错题本的题，不重复添加
-  const isExist = oldErrorList.some(item => item.id === currentQuestion.value.id)
-  if (!isExist) {
-    // 新增错题，记录答错时间
-    const newErrorItem = {
-      ...currentQuestion.value,
-      wrongTime: new Date().toLocaleString(),
-      userWrongAnswer: userAnswer.value
-    }
-    oldErrorList.push(newErrorItem)
-    // 保存到localStorage
-    localStorage.setItem(errorBookKey, JSON.stringify(oldErrorList))
+// ---------- 错题本（对接后端）----------
+const addToErrorBook = async () => {
+  // 错题模式下不再重复添加错题
+  if (mode.value === 'error') return
+  if (!userStore.user?.id) return
+  try {
+    await fetch('/api/user/errors', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: userStore.user.id,
+        questionId: currentQuestion.value.id,
+        subject: currentQuestion.value.subject,
+        userAnswer: userAnswer.value
+      })
+    })
+  } catch (err) {
+    console.error('保存错题失败', err)
   }
 }
+
+// ---------- 初始化 ----------
+onMounted(async () => {
+  await loadSubjects()
+  await loadQuestions() // 根据当前 mode 加载题目
+})
 </script>
 
 <style scoped>
@@ -389,6 +439,14 @@ const addToErrorBook = () => {
 .btn-secondary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* 加载提示 */
+.loading-box {
+  text-align: center;
+  padding: 4rem;
+  color: #999;
+  font-size: 1.1rem;
 }
 
 /* 空数据 */

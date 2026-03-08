@@ -26,7 +26,7 @@
     <div v-if="currentTab === 'single'" class="tab-content">
       <div class="form-card">
         <h3>添加单题</h3>
-        <!-- 第一行：题目类型（单独一行，更清晰） -->
+        <!-- 第一行：题目类型 -->
         <div class="form-row">
           <div class="form-group full-width">
             <label>题目类型</label>
@@ -138,22 +138,40 @@
       </div>
     </div>
 
-    <!-- 题目列表 -->
+    <!-- 题目列表（已集成批量删除） -->
     <div v-if="currentTab === 'list'" class="tab-content">
       <div class="list-card">
         <div class="list-header">
           <h3>题目列表</h3>
-          <button @click="loadQuestionList" class="btn-refresh">🔄 刷新</button>
+          <div class="list-actions">
+            <!-- 全选复选框 -->
+            <label class="select-all">
+              <input type="checkbox" v-model="selectAll" @change="toggleAll">
+              全选
+            </label>
+            <!-- 批量删除按钮 -->
+            <button @click="batchDelete" :disabled="selectedIds.length === 0" class="btn-batch-delete">
+              批量删除 ({{ selectedIds.length }})
+            </button>
+            <button @click="loadQuestionList" class="btn-refresh">🔄 刷新</button>
+          </div>
         </div>
         <div class="question-list">
           <div v-for="q in questionList" :key="q.id" class="list-item">
-            <div class="item-header">
-              <span class="item-tag">{{ q.year ? q.year + '年 | ' : '' }}{{ q.subject }} | {{ q.type }}</span>
-              <button @click="deleteQuestion(q.id)" class="btn-delete">删除</button>
+            <!-- 复选框列 -->
+            <input type="checkbox" class="item-checkbox" v-model="selectedIds" :value="q.id">
+            <div class="item-content">
+              <div class="item-header">
+                <span class="item-tag">{{ q.year ? q.year + '年 | ' : '' }}{{ q.subject }} | {{ q.type }}</span>
+                <button @click="deleteQuestion(q.id)" class="btn-delete">删除</button>
+              </div>
+              <div class="item-question">{{ q.question }}</div>
+              <div class="item-answer">正确答案：{{ q.answer }}</div>
             </div>
-            <div class="item-question">{{ q.question }}</div>
-            <div class="item-answer">正确答案：{{ q.answer }}</div>
           </div>
+        </div>
+        <div v-if="questionList.length === 0" class="empty-tip">
+          暂无题目，请先添加
         </div>
       </div>
     </div>
@@ -192,7 +210,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -231,14 +249,12 @@ const singleForm = reactive({
   analysis: ''
 })
 
-// 切换题目类型时，清空对应字段，避免脏数据
+// 切换题目类型
 const onTypeChange = () => {
   if (singleForm.type === '真题') {
-    // 切换到真题，清空科目
     singleForm.subject = ''
   } else {
-    // 切换到自定义题，清空年份
-    singleForm.year = 2025 // 重置为默认值，不影响
+    singleForm.year = 2025
   }
 }
 
@@ -250,6 +266,55 @@ const importResult = ref(null)
 const questionList = ref([])
 // 用户列表
 const userList = ref([])
+
+// ---------- 批量删除相关 ----------
+const selectedIds = ref([])
+const selectAll = ref(false)
+
+// 全选/取消全选
+const toggleAll = () => {
+  if (selectAll.value) {
+    selectedIds.value = questionList.value.map(item => item.id)
+  } else {
+    selectedIds.value = []
+  }
+}
+
+// 监听 selectedIds 变化，更新全选状态
+watch(selectedIds, (newVal) => {
+  if (newVal.length === questionList.value.length && questionList.value.length > 0) {
+    selectAll.value = true
+  } else {
+    selectAll.value = false
+  }
+})
+
+// 批量删除
+const batchDelete = async () => {
+  console.log('准备删除的ID列表:', selectedIds.value);
+  if (selectedIds.value.length === 0) return
+  if (!confirm(`确定要删除选中的 ${selectedIds.value.length} 道题目吗？`)) return
+
+  try {
+    const res = await fetch('/api/questions/batch', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: selectedIds.value })
+    })
+    const data = await res.json()
+    if (data.success) {
+      alert(`✅ 成功删除 ${data.deletedCount} 道题目`)
+      selectedIds.value = []
+      await loadQuestionList()
+    } else {
+      alert('删除失败：' + data.error)
+    }
+  } catch (err) {
+    console.error(err)
+    alert('请求失败')
+  }
+}
+// ---------------------------------
 
 onMounted(() => {
   const user = localStorage.getItem('currentUser')
@@ -277,8 +342,8 @@ const addSingleQuestion = async () => {
   }
   
   const question = {
-    year: singleForm.type === '真题' ? singleForm.year : null, // 真题传年份，自定义传null
-    subject: singleForm.type === '自定义题' ? singleForm.subject : '', // 自定义传科目，真题传空
+    year: singleForm.type === '真题' ? singleForm.year : null,
+    subject: singleForm.type === '自定义题' ? singleForm.subject : '',
     question: singleForm.question,
     options: [
       'A. ' + singleForm.optionA,
@@ -341,12 +406,13 @@ const loadQuestionList = async () => {
   try {
     const res = await fetch('/api/questions')
     questionList.value = await res.json()
+    console.log('题目列表:', questionList.value);
   } catch (err) {
     console.error('加载失败')
   }
 }
 
-// 删除题目
+// 删除单个题目
 const deleteQuestion = async (id) => {
   if (!confirm('确定要删除这道题吗？')) return
   try {
@@ -476,7 +542,7 @@ const handleLogout = () => {
   margin-bottom: 1.5rem;
 }
 .form-group.full-width {
-  grid-column: 1 / -1; /* 占满整行 */
+  grid-column: 1 / -1;
 }
 .form-group label {
   display: block;
@@ -544,12 +610,40 @@ const handleLogout = () => {
   font-weight: 500;
 }
 
-/* 列表 */
+/* 列表公共样式 */
 .list-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+}
+.list-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+.select-all {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  user-select: none;
+}
+.btn-batch-delete {
+  padding: 0.6rem 1.2rem;
+  background: #f56c6c;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+.btn-batch-delete:hover:not(:disabled) {
+  background: #f14545;
+}
+.btn-batch-delete:disabled {
+  background: #f8b3b3;
+  cursor: not-allowed;
 }
 .btn-refresh {
   padding: 0.6rem 1.2rem;
@@ -558,7 +652,6 @@ const handleLogout = () => {
   border: 1px solid #e8e8e8;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.3s ease;
 }
 .btn-refresh:hover {
   background: #e8e8e8;
@@ -566,18 +659,28 @@ const handleLogout = () => {
 .question-list, .user-list {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 .list-item, .user-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
   background: #f8f9fa;
-  padding: 1.5rem;
+  padding: 1rem;
   border-radius: 8px;
   border-left: 4px solid #667eea;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
 }
-.item-header, .user-info {
+.item-checkbox {
+  margin-top: 0.3rem;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.item-content {
+  flex: 1;
+}
+.item-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -642,10 +745,6 @@ const handleLogout = () => {
 @media (max-width: 900px) {
   .form-row, .options-row {
     grid-template-columns: 1fr;
-  }
-  .list-item, .user-item {
-    flex-direction: column;
-    gap: 1rem;
   }
   .user-info {
     flex-direction: column;

@@ -18,7 +18,8 @@ const routes = [
   { path: '/error-book', name: 'ErrorBook', component: ErrorBook },
   { path: '/stats', name: 'Stats', component: Stats },
   { path: '/exam-mock', name: 'ExamMock', component: ExamMock },
-  { path: '/admin', name: 'Admin', component: Admin }
+  { path: '/admin', name: 'Admin', component: Admin },
+  { path: '/error-exam', name: 'ErrorExam', component: Exam }
 ]
 
 const router = createRouter({
