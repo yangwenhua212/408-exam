@@ -3,7 +3,7 @@
     <!-- 考试未开始：欢迎页 -->
     <div v-if="!isStarted" class="start-screen">
       <div class="start-card">
-        <h1>📚 408选择题专项模拟</h1>
+        <h1>408选择题真题</h1>
         <p class="desc">考试时长：90分钟 | 满分：80分</p>
         <p class="tips">共40道单选题，每题2分，中途不要刷新页面</p>
         
@@ -24,7 +24,7 @@
       <!-- 顶部考试栏 -->
       <header class="mock-header">
         <div class="header-left">
-          <span class="exam-title">408选择题专项模拟</span>
+          <span class="exam-title">408选择题真题</span>
           <span class="exam-progress">已答：{{ answeredCount }} / {{ questionList.length }}</span>
         </div>
         <div class="header-right">
@@ -91,7 +91,7 @@
     <!-- 考试结束：成绩报告 -->
     <div v-else-if="isFinished" class="result-screen">
       <div class="result-card">
-        <h1>🎉 考试完成！</h1>
+        <h1>考试完成！</h1>
         <div class="score-box">
           <div class="score-item">
             <span class="score-label">总分</span>
@@ -108,7 +108,7 @@
         </div>
 
         <div class="result-detail">
-          <h3>📋 答题详情</h3>
+          <h3>答题详情</h3>
           <div class="review-list">
             <div
               v-for="(item, index) in reviewList"
@@ -293,65 +293,67 @@ onUnmounted(() => {
 <style scoped>
 .mock-container {
   min-height: 100vh;
-  background-color: #f5f7fa;
+  /* 统一淡蓝渐变 */
+  background: linear-gradient(135deg, #d6f4ff 0%, #a8dfff 100%);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
-
 /* 开始页 */
 .start-screen {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #90cdf4 0%, #2b6cb0 100%);
 }
 .start-card {
   background: white;
-  padding: 3rem;
+  padding: 2rem;
   border-radius: 16px;
   text-align: center;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+  width: 90%;
+  max-width: 500px;
 }
 .start-card h1 {
-  color: #333;
+  color: #2d3748;
   margin-bottom: 1rem;
+  font-size: 1.8rem;
 }
 .desc {
-  color: #666;
-  font-size: 1.1rem;
+  color: #4a5568;
+  font-size: 1rem;
   margin-bottom: 0.5rem;
 }
 .tips {
-  color: #999;
-  font-size: 0.95rem;
-  margin-bottom: 2rem;
+  color: #718096;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
 }
 .filter-group {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 .filter-select {
   padding: 0.6rem 1.2rem;
-  border: 1px solid #e8e8e8;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
   font-size: 1rem;
   margin-left: 0.5rem;
 }
 .btn-start {
-  padding: 1rem 3rem;
-  background: #667eea;
+  padding: 1rem 2.5rem;
+  background: #2b6cb0;
   color: white;
   border: none;
   border-radius: 30px;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 .btn-start:hover {
-  background: #5568d3;
+  background: #2c5282;
   transform: translateY(-2px);
 }
-
 /* 考试进行中 */
 .mock-header {
   background: white;
@@ -372,10 +374,10 @@ onUnmounted(() => {
 .exam-title {
   font-weight: 700;
   font-size: 1.2rem;
-  color: #333;
+  color: #2d3748;
 }
 .exam-progress {
-  color: #667eea;
+  color: #2b6cb0;
   font-weight: 500;
 }
 .header-right {
@@ -386,10 +388,10 @@ onUnmounted(() => {
 .timer {
   font-weight: 700;
   font-size: 1.1rem;
-  color: #333;
+  color: #2d3748;
 }
 .timer.warning {
-  color: #ff4d4f;
+  color: #e53e3e;
   animation: pulse 1s infinite;
 }
 @keyframes pulse {
@@ -398,7 +400,7 @@ onUnmounted(() => {
 }
 .btn-submit {
   padding: 0.6rem 1.5rem;
-  background: #ff4d4f;
+  background: #e53e3e;
   color: white;
   border: none;
   border-radius: 6px;
@@ -407,18 +409,16 @@ onUnmounted(() => {
   transition: all 0.3s ease;
 }
 .btn-submit:hover {
-  background: #d9363e;
+  background: #c53030;
 }
-
 .exam-body {
   display: grid;
   grid-template-columns: 1fr 280px;
   gap: 2rem;
   max-width: 1400px;
   margin: 2rem auto;
-  padding: 0 2rem;
+  padding: 0 1rem;
 }
-
 /* 题目区 */
 .question-area {
   display: flex;
@@ -426,9 +426,9 @@ onUnmounted(() => {
 }
 .question-card {
   background: white;
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 2rem;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
 }
 .question-header {
   display: flex;
@@ -436,20 +436,20 @@ onUnmounted(() => {
   margin-bottom: 1.5rem;
 }
 .question-tag {
-  background: #667eea15;
-  color: #667eea;
+  background: #ebf8ff;
+  color: #2b6cb0;
   padding: 0.3rem 0.8rem;
   border-radius: 4px;
   font-size: 0.9rem;
   font-weight: 500;
 }
 .question-score {
-  color: #999;
+  color: #718096;
   font-size: 0.9rem;
 }
 .question-content h2 {
   font-size: 1.2rem;
-  color: #333;
+  color: #2d3748;
   line-height: 1.6;
   margin-bottom: 1.5rem;
   font-weight: 600;
@@ -462,7 +462,7 @@ onUnmounted(() => {
 }
 .option-item {
   padding: 1rem 1.2rem;
-  border: 1px solid #e8e8e8;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -470,12 +470,12 @@ onUnmounted(() => {
   line-height: 1.5;
 }
 .option-item:hover {
-  border-color: #667eea;
-  background: #667eea08;
+  border-color: #2b6cb0;
+  background: #ebf8ff;
 }
 .option-item.selected {
-  border-color: #667eea;
-  background: #667eea15;
+  border-color: #2b6cb0;
+  background: #ebf8ff;
 }
 .nav-buttons {
   display: flex;
@@ -484,35 +484,34 @@ onUnmounted(() => {
 }
 .btn-nav {
   padding: 0.8rem 2rem;
-  background: #f5f5f5;
-  color: #666;
-  border: 1px solid #e8e8e8;
+  background: #f7fafc;
+  color: #4a5568;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 .btn-nav:hover:not(:disabled) {
-  background: #e8e8e8;
+  background: #e2e8f0;
 }
 .btn-nav:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
-
 /* 答题卡 */
 .answer-card {
   background: white;
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 1.5rem;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
   height: fit-content;
   position: sticky;
   top: 5rem;
 }
 .answer-card h3 {
   margin: 0 0 1rem 0;
-  color: #333;
+  color: #2d3748;
   font-size: 1.1rem;
 }
 .card-grid {
@@ -525,69 +524,68 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f5f5;
-  border: 1px solid #e8e8e8;
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
   border-radius: 6px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 .card-item:hover {
-  border-color: #667eea;
+  border-color: #2b6cb0;
 }
 .card-item.answered {
-  background: #667eea;
+  background: #2b6cb0;
   color: white;
-  border-color: #667eea;
+  border-color: #2b6cb0;
 }
 .card-item.current {
-  border: 2px solid #667eea;
+  border: 2px solid #2b6cb0;
   transform: scale(1.1);
 }
-
 /* 成绩报告 */
 .result-screen {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f7fa;
-  padding: 2rem;
+  background: linear-gradient(135deg, #d6f4ff 0%, #a8dfff 100%);
+  padding: 2rem 1rem;
 }
 .result-card {
   background: white;
   border-radius: 16px;
-  padding: 3rem;
+  padding: 2rem;
   max-width: 900px;
   width: 100%;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
 }
 .result-card h1 {
   text-align: center;
-  color: #333;
+  color: #2d3748;
   margin-bottom: 2rem;
 }
 .score-box {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
+  gap: 1rem;
   margin-bottom: 2rem;
 }
 .score-item {
-  background: #f8f9fa;
+  background: #f7fafc;
   padding: 1.5rem;
   border-radius: 12px;
   text-align: center;
 }
 .score-label {
   display: block;
-  color: #666;
+  color: #4a5568;
   font-size: 0.95rem;
   margin-bottom: 0.5rem;
 }
 .score-value {
   display: block;
-  color: #667eea;
+  color: #2b6cb0;
   font-size: 1.8rem;
   font-weight: 700;
 }
@@ -595,23 +593,23 @@ onUnmounted(() => {
   margin-bottom: 2rem;
 }
 .result-detail h3 {
-  color: #333;
+  color: #2d3748;
   margin-bottom: 1rem;
 }
 .review-list {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 .review-item {
-  background: #f8f9fa;
+  background: #f7fafc;
   padding: 1.5rem;
   border-radius: 12px;
-  border-left: 4px solid #52c41a;
+  border-left: 4px solid #38a169;
 }
 .review-item.wrong {
-  border-left-color: #ff4d4f;
-  background: #fff2f0;
+  border-left-color: #e53e3e;
+  background: #fff5f5;
 }
 .review-header {
   display: flex;
@@ -620,7 +618,7 @@ onUnmounted(() => {
 }
 .review-num {
   font-weight: 600;
-  color: #333;
+  color: #2d3748;
 }
 .review-tag {
   padding: 0.2rem 0.8rem;
@@ -629,20 +627,20 @@ onUnmounted(() => {
   font-weight: 500;
 }
 .review-tag.correct {
-  background: #f6ffed;
-  color: #52c41a;
+  background: #f0fff4;
+  color: #38a169;
 }
 .review-tag.wrong {
-  background: #fff2f0;
-  color: #ff4d4f;
+  background: #fff5f5;
+  color: #e53e3e;
 }
 .review-question {
-  color: #333;
+  color: #2d3748;
   margin-bottom: 0.8rem;
   line-height: 1.6;
 }
 .review-answer {
-  color: #666;
+  color: #4a5568;
   font-size: 0.95rem;
   margin-bottom: 0.8rem;
 }
@@ -653,7 +651,7 @@ onUnmounted(() => {
   background: white;
   padding: 1rem;
   border-radius: 8px;
-  color: #333;
+  color: #2d3748;
   line-height: 1.6;
   font-size: 0.95rem;
 }
@@ -672,21 +670,20 @@ onUnmounted(() => {
   border: none;
 }
 .btn-home {
-  background: #f5f5f5;
-  color: #666;
+  background: #f7fafc;
+  color: #4a5568;
 }
 .btn-home:hover {
-  background: #e8e8e8;
+  background: #e2e8f0;
 }
 .btn-restart {
-  background: #667eea;
+  background: #2b6cb0;
   color: white;
 }
 .btn-restart:hover {
-  background: #5568d3;
+  background: #2c5282;
 }
-
-/* 响应式 */
+/* 手机适配 */
 @media (max-width: 1200px) {
   .exam-body {
     grid-template-columns: 1fr;
@@ -698,6 +695,16 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .score-box {
     grid-template-columns: 1fr;
+  }
+  .mock-header {
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+  }
+  .header-left {
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
   }
 }
 </style>

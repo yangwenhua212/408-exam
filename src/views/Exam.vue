@@ -259,12 +259,12 @@ onMounted(async () => {
 <style scoped>
 .exam-container {
   min-height: 100vh;
-  background-color: #f5f7fa;
+  /* 统一淡蓝渐变 */
+  background: linear-gradient(135deg, #d6f4ff 0%, #a8dfff 100%);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   display: flex;
   flex-direction: column;
 }
-
 /* 顶部导航 */
 .exam-header {
   background: #fff;
@@ -276,19 +276,19 @@ onMounted(async () => {
 }
 .back-btn {
   text-decoration: none;
-  color: #667eea;
+  color: #2b6cb0;
   font-weight: 500;
   transition: color 0.3s ease;
 }
 .back-btn:hover {
-  color: #5568d3;
+  color: #2c5282;
 }
 .exam-info {
   display: flex;
   gap: 2rem;
   align-items: center;
   font-weight: 500;
-  color: #333;
+  color: #2d3748;
 }
 /* 筛选器样式 */
 .filter-group {
@@ -298,7 +298,7 @@ onMounted(async () => {
 }
 .filter-select {
   padding: 0.5rem 1rem;
-  border: 1px solid #e8e8e8;
+  border: 1px solid #e2e8f0;
   border-radius: 6px;
   font-size: 0.95rem;
   outline: none;
@@ -306,22 +306,21 @@ onMounted(async () => {
   transition: border-color 0.3s ease;
 }
 .filter-select:focus {
-  border-color: #667eea;
+  border-color: #2b6cb0;
 }
-
 /* 题目主体 */
 .exam-main {
   flex: 1;
   max-width: 900px;
   width: 100%;
   margin: 2rem auto;
-  padding: 0 2rem;
+  padding: 0 1rem;
 }
 .question-card {
   background: #fff;
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 2rem;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
 }
 .question-header {
   display: flex;
@@ -329,25 +328,24 @@ onMounted(async () => {
   margin-bottom: 1.5rem;
 }
 .question-tag {
-  background: #667eea15;
-  color: #667eea;
+  background: #ebf8ff;
+  color: #2b6cb0;
   padding: 0.3rem 0.8rem;
   border-radius: 4px;
   font-size: 0.9rem;
   font-weight: 500;
 }
 .question-difficulty {
-  color: #999;
+  color: #718096;
   font-size: 0.9rem;
 }
 .question-content h2 {
   font-size: 1.2rem;
-  color: #333;
+  color: #2d3748;
   line-height: 1.6;
   margin-bottom: 1.5rem;
   font-weight: 600;
 }
-
 /* 选项列表 */
 .options-list {
   display: flex;
@@ -357,51 +355,50 @@ onMounted(async () => {
 }
 .option-item {
   padding: 1rem 1.2rem;
-  border: 1px solid #e8e8e8;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
   font-size: 1rem;
   line-height: 1.5;
+  background: #fff;
 }
 .option-item:hover:not(:disabled) {
-  border-color: #667eea;
-  background: #667eea08;
+  border-color: #2b6cb0;
+  background: #ebf8ff;
 }
 .option-item.selected {
-  border-color: #667eea;
-  background: #667eea15;
+  border-color: #2b6cb0;
+  background: #ebf8ff;
 }
 .option-item.correct {
-  border-color: #52c41a;
-  background: #f6ffed;
+  border-color: #38a169;
+  background: #f0fff4;
 }
 .option-item.wrong {
-  border-color: #ff4d4f;
-  background: #fff2f0;
+  border-color: #e53e3e;
+  background: #fff5f5;
 }
 .option-item:disabled {
   cursor: not-allowed;
 }
-
 /* 解析框 */
 .analysis-box {
-  background: #f8f9fa;
+  background: #f7fafc;
   border-radius: 8px;
   padding: 1.2rem;
   margin-bottom: 2rem;
 }
 .analysis-header h3 {
-  color: #52c41a;
+  color: #38a169;
   margin: 0 0 0.8rem 0;
   font-size: 1.1rem;
 }
 .analysis-content {
-  color: #333;
+  color: #2d3748;
   line-height: 1.6;
   font-size: 0.95rem;
 }
-
 /* 操作按钮 */
 .action-buttons {
   display: flex;
@@ -418,47 +415,44 @@ onMounted(async () => {
   border: none;
 }
 .btn-primary {
-  background: #667eea;
+  background: #2b6cb0;
   color: #fff;
 }
 .btn-primary:hover:not(:disabled) {
-  background: #5568d3;
+  background: #2c5282;
 }
 .btn-primary:disabled {
-  background: #ccc;
+  background: #cbd5e0;
   cursor: not-allowed;
 }
 .btn-secondary {
-  background: #f5f5f5;
-  color: #666;
-  border: 1px solid #e8e8e8;
+  background: #f7fafc;
+  color: #4a5568;
+  border: 1px solid #e2e8f0;
 }
 .btn-secondary:hover:not(:disabled) {
-  background: #e8e8e8;
+  background: #e2e8f0;
 }
 .btn-secondary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
-
 /* 加载提示 */
 .loading-box {
   text-align: center;
   padding: 4rem;
-  color: #999;
+  color: #718096;
   font-size: 1.1rem;
 }
-
 /* 空数据 */
 .empty-box {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #999;
+  color: #718096;
 }
-
-/* 响应式 */
+/* 手机适配 */
 @media (max-width: 768px) {
   .exam-header {
     flex-direction: column;

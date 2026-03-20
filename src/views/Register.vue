@@ -112,49 +112,67 @@ const goToLogin = () => {
 </script>
 
 <style scoped>
-/* 你原来的样式完全不动 */
 .auth-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  /* 统一淡蓝色渐变 */
+  background: linear-gradient(135deg, #d6f4ff 0%, #a8dfff 100%);
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 2rem;
+  padding: 1rem;
 }
 .auth-card {
   background: white;
-  padding: 2.5rem;
+  padding: 2rem;
   border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
   width: 100%;
   max-width: 400px;
   position: relative;
 }
+.btn-back {
+  background: none;
+  border: none;
+  color: #2b6cb0;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 1rem;
+  position: absolute;
+  top: 1.2rem;
+  left: 1.2rem;
+}
 .auth-card h2 {
   text-align: center;
-  color: #333;
-  margin-bottom: 2rem;
+  color: #2d3748;
+  margin-bottom: 1.5rem;
 }
 .form-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.2rem;
 }
 .form-group label {
   display: block;
   margin-bottom: 0.5rem;
-  color: #555;
+  color: #4a5568;
   font-weight: 500;
 }
 .form-group input {
   width: 100%;
   padding: 0.8rem;
-  border: 1px solid #ddd;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
   font-size: 1rem;
+  box-sizing: border-box;
+  transition: border-color 0.3s ease;
+}
+.form-group input:focus {
+  border-color: #90cdf4;
+  outline: none;
 }
 .btn-primary {
   width: 100%;
   padding: 0.8rem;
-  background: #667eea;
+  background: #2b6cb0;
   color: white;
   border: none;
   border-radius: 8px;
@@ -164,25 +182,17 @@ const goToLogin = () => {
   transition: background 0.3s ease;
 }
 .btn-primary:hover {
-  background: #5568d3;
+  background: #2c5282;
 }
 .auth-link {
   text-align: center;
-  margin-top: 1.5rem;
-  color: #666;
+  margin-top: 1.2rem;
+  color: #4a5568;
 }
 .auth-link a {
-  color: #667eea;
+  color: #2b6cb0;
   cursor: pointer;
   text-decoration: none;
-}
-.btn-back {
-  position: absolute;
-  top: 15px;
-  left: 15px;
-  background: none;
-  border: none;
-  color: #667eea;
-  cursor: pointer;
+  font-weight: 500;
 }
 </style>

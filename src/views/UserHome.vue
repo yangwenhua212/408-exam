@@ -177,7 +177,8 @@ const handleLogout = () => {
 <style scoped>
 .user-home {
   min-height: 100vh;
-  background-color: #f5f7fa;
+  /* 统一淡蓝渐变 */
+  background: linear-gradient(135deg, #d6f4ff 0%, #a8dfff 100%);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 .header {
@@ -195,7 +196,7 @@ const handleLogout = () => {
 .page-title {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #333;
+  color: #2b6cb0;
   margin: 0;
 }
 .header-nav {
@@ -205,22 +206,22 @@ const handleLogout = () => {
 }
 .nav-item {
   text-decoration: none;
-  color: #666;
+  color: #4a5568;
   font-weight: 500;
   font-size: 1rem;
   transition: color 0.3s ease;
   cursor: pointer;
 }
 .nav-item.active, .nav-item:hover {
-  color: #667eea;
+  color: #2b6cb0;
 }
 .logout-btn:hover {
-  color: #ff4d4f;
+  color: #e53e3e;
 }
 .main-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 2rem 1rem;
   display: flex;
   justify-content: center;
 }
@@ -233,13 +234,14 @@ const handleLogout = () => {
 .user-info-card {
   width: 100%;
   background: #fff;
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
 }
 .cover-bg {
   height: 120px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  /* 淡蓝渐变封面 */
+  background: linear-gradient(135deg, #90cdf4 0%, #2b6cb0 100%);
 }
 .user-base {
   padding: 0 1.5rem 1.5rem;
@@ -260,8 +262,8 @@ const handleLogout = () => {
 }
 .btn-edit {
   padding: 0.4rem 1rem;
-  border: 1px solid #667eea;
-  color: #667eea;
+  border: 1px solid #2b6cb0;
+  color: #2b6cb0;
   background: #fff;
   border-radius: 20px;
   font-size: 0.85rem;
@@ -269,27 +271,26 @@ const handleLogout = () => {
   transition: all 0.3s ease;
 }
 .btn-edit:hover {
-  background: #667eea;
+  background: #2b6cb0;
   color: #fff;
 }
 .user-name {
   font-size: 1.3rem;
   font-weight: 700;
-  color: #333;
+  color: #2d3748;
   margin-bottom: 0.3rem;
 }
 .user-desc {
-  color: #666;
+  color: #4a5568;
   font-size: 0.9rem;
   margin: 0.5rem 0;
   line-height: 1.4;
 }
 .user-location {
-  color: #999;
+  color: #718096;
   font-size: 0.85rem;
   margin: 0.5rem 0;
 }
-
 /* 模态框样式 */
 .modal-mask {
   position: fixed;
@@ -305,33 +306,33 @@ const handleLogout = () => {
 }
 .modal-content {
   background: #fff;
-  border-radius: 12px;
+  border-radius: 16px;
   width: 90%;
   max-width: 450px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1.2rem 1.5rem;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #e2e8f0;
 }
 .modal-header h3 {
   margin: 0;
   font-size: 1.2rem;
-  color: #333;
+  color: #2d3748;
 }
 .close-btn {
   background: none;
   border: none;
   font-size: 1.5rem;
-  color: #999;
+  color: #718096;
   cursor: pointer;
   line-height: 1;
 }
 .close-btn:hover {
-  color: #333;
+  color: #2d3748;
 }
 .modal-body {
   padding: 1.5rem;
@@ -342,14 +343,14 @@ const handleLogout = () => {
 .form-item label {
   display: block;
   font-size: 0.9rem;
-  color: #333;
+  color: #2d3748;
   margin-bottom: 0.5rem;
   font-weight: 500;
 }
 .form-input, .form-textarea {
   width: 100%;
   padding: 0.6rem 0.8rem;
-  border: 1px solid #e8e8e8;
+  border: 1px solid #e2e8f0;
   border-radius: 6px;
   font-size: 0.95rem;
   outline: none;
@@ -357,7 +358,7 @@ const handleLogout = () => {
   box-sizing: border-box;
 }
 .form-input:focus, .form-textarea:focus {
-  border-color: #667eea;
+  border-color: #2b6cb0;
 }
 .avatar-upload {
   display: flex;
@@ -370,7 +371,7 @@ const handleLogout = () => {
   border-radius: 50%;
   object-fit: cover;
   margin-bottom: 10px;
-  border: 2px solid #667eea;
+  border: 2px solid #2b6cb0;
 }
 .upload-controls {
   display: flex;
@@ -379,19 +380,19 @@ const handleLogout = () => {
 }
 .btn-upload {
   padding: 0.6rem 1rem;
-  background: #f5f5f5;
-  border: 1px solid #e8e8e8;
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
   border-radius: 6px;
   cursor: pointer;
   white-space: nowrap;
   font-size: 0.9rem;
 }
 .btn-upload:hover {
-  background: #e8e8e8;
+  background: #e2e8f0;
 }
 .modal-footer {
   padding: 1rem 1.5rem;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid #e2e8f0;
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
@@ -402,23 +403,23 @@ const handleLogout = () => {
   font-size: 0.95rem;
   cursor: pointer;
   transition: all 0.3s ease;
+  border: none;
 }
 .btn-cancel {
-  background: #f5f5f5;
-  border: 1px solid #e8e8e8;
-  color: #666;
+  background: #f7fafc;
+  color: #4a5568;
 }
 .btn-cancel:hover {
-  background: #e8e8e8;
+  background: #e2e8f0;
 }
 .btn-save {
-  background: #667eea;
-  border: none;
+  background: #2b6cb0;
   color: #fff;
 }
 .btn-save:hover {
-  background: #5568d3;
+  background: #2c5282;
 }
+/* 手机适配 */
 @media (max-width: 768px) {
   .header-container {
     padding: 1rem;

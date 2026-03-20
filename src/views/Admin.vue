@@ -2,7 +2,7 @@
   <div class="admin-dashboard">
     <!-- 顶部导航 -->
     <header class="admin-header">
-      <h1>📝 408题库管理后台</h1>
+      <h1>408题库管理后台</h1>
       <div class="header-right">
         <span>欢迎，{{ adminUsername }}</span>
         <button @click="handleLogout" class="btn-logout">退出登录</button>
@@ -26,6 +26,7 @@
     <div v-if="currentTab === 'single'" class="tab-content">
       <div class="form-card">
         <h3>添加单题</h3>
+
         <!-- 第一行：题目类型 -->
         <div class="form-row">
           <div class="form-group full-width">
@@ -37,9 +38,8 @@
           </div>
         </div>
 
-        <!-- 第二行：年份/科目 动态显示 -->
+        <!-- 第二行：年份/科目/难度 -->
         <div class="form-row">
-          <!-- 年份：仅真题显示 -->
           <div class="form-group" v-if="singleForm.type === '真题'">
             <label>年份</label>
             <select v-model="singleForm.year">
@@ -47,7 +47,6 @@
             </select>
           </div>
 
-          <!-- 科目：仅自定义题显示 -->
           <div class="form-group" v-if="singleForm.type === '自定义题'">
             <label>科目</label>
             <select v-model="singleForm.subject">
@@ -58,7 +57,6 @@
             </select>
           </div>
 
-          <!-- 难度：始终显示 -->
           <div class="form-group">
             <label>难度</label>
             <select v-model="singleForm.difficulty">
@@ -69,11 +67,42 @@
           </div>
         </div>
 
-        <div class="form-group">
-          <label>题干</label>
-          <textarea v-model="singleForm.question" placeholder="请输入题目内容"></textarea>
+        <!-- 第三行：题型 -->
+        <div class="form-row" style="grid-template-columns: 1fr;">
+          <div class="form-group full-width">
+            <label>题型</label>
+            <select v-model="singleForm.questionType">
+              <option v-for="type in questionTypes" :key="type" :value="type">{{ type }}</option>
+            </select>
+          </div>
         </div>
 
+        <!-- 题干 + 图片上传 -->
+        <div class="form-group full-width">
+          <label>题干（支持图片）</label>
+          <div style="display: flex; gap: 10px; margin-bottom: 8px;">
+            <button type="button" class="btn-upload-img" @click="triggerUpload">
+              上传图片
+            </button>
+            <span style="color: #718096; font-size: 0.85rem;">
+              支持jpg/png/gif，最大5MB
+            </span>
+          </div>
+          <textarea 
+            v-model="singleForm.question" 
+            placeholder="输入题目内容（支持HTML和图片）..."
+            rows="6"
+          ></textarea>
+          <input 
+            type="file" 
+            ref="imageInput" 
+            accept="image/*" 
+            style="display: none;"
+            @change="handleImageUpload"
+          >
+        </div>
+
+        <!-- 选项 -->
         <div class="options-row">
           <div class="form-group">
             <label>选项A</label>
@@ -93,6 +122,7 @@
           </div>
         </div>
 
+        <!-- 正确答案 -->
         <div class="form-row">
           <div class="form-group">
             <label>正确答案</label>
@@ -105,12 +135,13 @@
           </div>
         </div>
 
+        <!-- 答案解析 -->
         <div class="form-group">
           <label>答案解析</label>
           <textarea v-model="singleForm.analysis" placeholder="请输入答案解析"></textarea>
         </div>
 
-        <button @click="addSingleQuestion" class="btn-submit">✅ 添加题目</button>
+        <button @click="addSingleQuestion" class="btn-submit">添加题目</button>
       </div>
     </div>
 
@@ -118,7 +149,7 @@
     <div v-if="currentTab === 'batch'" class="tab-content">
       <div class="form-card">
         <h3>批量导入题目</h3>
-        <p class="tips">请将题目整理为JSON数组格式，粘贴到下方输入框</p>
+        <p class="tips">请将题目整理为JSON数组格式，粘贴到下方输入框（请包含question_type字段）</p>
         <textarea v-model="batchText" class="batch-textarea" placeholder='[
   {
     "year": 2025,
@@ -128,44 +159,60 @@
     "answer": "C",
     "analysis": "解析",
     "difficulty": "简单",
-    "type": "真题"
+    "type": "真题",
+    "question_type": "单选题"
   }
 ]'></textarea>
-        <button @click="batchImport" class="btn-submit">🚀 批量导入</button>
+        <button @click="batchImport" class="btn-submit">批量导入</button>
         <div v-if="importResult" class="import-result">
           导入成功：{{ importResult.successCount }} 题，失败：{{ importResult.failCount }} 题
         </div>
       </div>
     </div>
 
-    <!-- 题目列表（已集成批量删除） -->
+    <!-- 题目列表（集成筛选功能） -->
     <div v-if="currentTab === 'list'" class="tab-content">
       <div class="list-card">
         <div class="list-header">
           <h3>题目列表</h3>
           <div class="list-actions">
-            <!-- 全选复选框 -->
+            <!-- 筛选控件组 -->
+            <div class="filter-group">
+              <select v-model="filterSubject" class="filter-select">
+                <option value="">全部科目</option>
+                <option v-for="sub in subjectOptions" :key="sub" :value="sub">{{ sub }}</option>
+              </select>
+              <select v-model="filterYear" class="filter-select">
+                <option value="">全部年份</option>
+                <option v-for="year in yearList" :key="year" :value="year">{{ year }}年</option>
+              </select>
+              <select v-model="filterType" class="filter-select">
+                <option value="">全部题型</option>
+                <option v-for="type in questionTypes" :key="type" :value="type">{{ type }}</option>
+              </select>
+              <button @click="resetFilters" class="btn-reset">重置</button>
+            </div>
+            <!-- 批量删除和刷新 -->
             <label class="select-all">
-              <input type="checkbox" v-model="selectAll" @change="toggleAll">
-              全选
+              <input type="checkbox" v-model="selectAll" @change="toggleAll"> 全选
             </label>
-            <!-- 批量删除按钮 -->
             <button @click="batchDelete" :disabled="selectedIds.length === 0" class="btn-batch-delete">
               批量删除 ({{ selectedIds.length }})
             </button>
-            <button @click="loadQuestionList" class="btn-refresh">🔄 刷新</button>
+            <button @click="loadQuestionList" class="btn-refresh">刷新</button>
           </div>
         </div>
         <div class="question-list">
           <div v-for="q in questionList" :key="q.id" class="list-item">
-            <!-- 复选框列 -->
             <input type="checkbox" class="item-checkbox" v-model="selectedIds" :value="q.id">
             <div class="item-content">
               <div class="item-header">
-                <span class="item-tag">{{ q.year ? q.year + '年 | ' : '' }}{{ q.subject }} | {{ q.type }}</span>
+                <span class="item-tag">
+                  {{ q.year ? q.year + '年 | ' : '' }}{{ q.subject }} | {{ q.type }} | {{ q.question_type || '单选题' }}
+                </span>
                 <button @click="deleteQuestion(q.id)" class="btn-delete">删除</button>
               </div>
-              <div class="item-question">{{ q.question }}</div>
+              <div class="item-question" v-html="q.question"></div>
               <div class="item-answer">正确答案：{{ q.answer }}</div>
             </div>
           </div>
@@ -181,7 +228,7 @@
       <div class="list-card">
         <div class="list-header">
           <h3>用户列表</h3>
-          <button @click="loadUserList" class="btn-refresh">🔄 刷新</button>
+          <button @click="loadUserList" class="btn-refresh">刷新</button>
         </div>
         <div class="user-list">
           <div v-for="user in userList" :key="user.id" class="user-item">
@@ -215,8 +262,18 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const adminUsername = ref('')
+const imageInput = ref(null)
 
-// 年份列表：2009-2025年
+// 筛选条件
+const filterSubject = ref('')
+const filterYear = ref('')
+const filterType = ref('')
+const subjectOptions = ref([]) // 科目选项
+
+// 题型列表
+const questionTypes = ref(['单选题']) // 默认值
+
+// 年份列表
 const yearList = computed(() => {
   const list = []
   for (let year = 2025; year >= 2009; year--) {
@@ -246,7 +303,8 @@ const singleForm = reactive({
   optionD: '',
   answer: 'A',
   difficulty: '简单',
-  analysis: ''
+  analysis: '',
+  questionType: '单选题'
 })
 
 // 切换题目类型
@@ -267,7 +325,7 @@ const questionList = ref([])
 // 用户列表
 const userList = ref([])
 
-// ---------- 批量删除相关 ----------
+// 批量删除相关
 const selectedIds = ref([])
 const selectAll = ref(false)
 
@@ -280,7 +338,6 @@ const toggleAll = () => {
   }
 }
 
-// 监听 selectedIds 变化，更新全选状态
 watch(selectedIds, (newVal) => {
   if (newVal.length === questionList.value.length && questionList.value.length > 0) {
     selectAll.value = true
@@ -291,7 +348,6 @@ watch(selectedIds, (newVal) => {
 
 // 批量删除
 const batchDelete = async () => {
-  console.log('准备删除的ID列表:', selectedIds.value);
   if (selectedIds.value.length === 0) return
   if (!confirm(`确定要删除选中的 ${selectedIds.value.length} 道题目吗？`)) return
 
@@ -314,7 +370,101 @@ const batchDelete = async () => {
     alert('请求失败')
   }
 }
-// ---------------------------------
+
+// 图片上传
+const triggerUpload = () => {
+  if (imageInput.value) {
+    imageInput.value.click()
+  }
+}
+
+const handleImageUpload = async (e) => {
+  const file = e.target.files[0]
+  if (!file) return
+
+  const formData = new FormData()
+  formData.append('image', file)
+
+  try {
+    const baseUrl = import.meta.env.DEV ? 'http://localhost:3000' : ''
+    const res = await fetch(`${baseUrl}/api/upload-image`, {
+      method: 'POST',
+      body: formData
+    })
+    const data = await res.json()
+
+    if (data.success) {
+      const imgTag = `<br><img src="${data.url}" style="max-width:100%;height:auto;border-radius:8px;margin:1rem 0;" /><br>`
+      singleForm.question += imgTag
+      if (imageInput.value) {
+        imageInput.value.value = ''
+      }
+      alert('✅ 图片上传成功！已自动插入到题干中～')
+    } else {
+      alert('❌ 上传失败：' + data.error)
+    }
+  } catch (err) {
+    console.error('上传出错：', err)
+    alert('❌ 上传失败！请检查后端服务是否启动～')
+  }
+}
+
+// 加载科目列表
+const loadSubjects = async () => {
+  try {
+    const res = await fetch('/api/subjects')
+    if (res.ok) {
+      subjectOptions.value = await res.json()
+    }
+  } catch (err) {
+    console.error('加载科目列表失败', err)
+  }
+}
+
+// 加载题型列表
+const loadQuestionTypes = async () => {
+  try {
+    const res = await fetch('/api/question-types')
+    if (res.ok) {
+      const types = await res.json()
+      questionTypes.value = types
+    }
+  } catch (err) {
+    console.error('加载题型列表失败', err)
+  }
+}
+
+// 加载题目列表（支持筛选）
+const loadQuestionList = async () => {
+  try {
+    const params = new URLSearchParams()
+    if (filterSubject.value) params.append('subject', filterSubject.value)
+    if (filterYear.value) params.append('year', filterYear.value)
+    if (filterType.value) params.append('questionType', filterType.value)
+    
+    const url = `/api/questions?${params.toString()}`
+    const res = await fetch(url)
+    questionList.value = await res.json()
+    // 重置全选状态
+    selectedIds.value = []
+    selectAll.value = false
+  } catch (err) {
+    console.error('加载题目失败', err)
+  }
+}
+
+// 重置筛选条件
+const resetFilters = () => {
+  filterSubject.value = ''
+  filterYear.value = ''
+  filterType.value = ''
+  loadQuestionList()
+}
+
+// 监听筛选条件变化，自动刷新
+watch([filterSubject, filterYear, filterType], () => {
+  loadQuestionList()
+})
 
 onMounted(() => {
   const user = localStorage.getItem('currentUser')
@@ -330,7 +480,9 @@ onMounted(() => {
     return
   }
   adminUsername.value = parsedUser.username
-  loadQuestionList()
+  loadSubjects()        // 加载科目
+  loadQuestionTypes()   // 加载题型
+  loadQuestionList()    // 加载题目列表（带筛选）
   loadUserList()
 })
 
@@ -354,7 +506,8 @@ const addSingleQuestion = async () => {
     answer: singleForm.answer,
     analysis: singleForm.analysis,
     difficulty: singleForm.difficulty,
-    type: singleForm.type
+    type: singleForm.type,
+    questionType: singleForm.questionType
   }
   
   try {
@@ -366,7 +519,6 @@ const addSingleQuestion = async () => {
     
     if (res.ok) {
       alert('✅ 添加成功！')
-      // 清空表单
       singleForm.question = ''
       singleForm.optionA = ''
       singleForm.optionB = ''
@@ -398,17 +550,6 @@ const batchImport = async () => {
     }
   } catch (err) {
     alert('JSON格式错误，请检查输入')
-  }
-}
-
-// 加载题目列表
-const loadQuestionList = async () => {
-  try {
-    const res = await fetch('/api/questions')
-    questionList.value = await res.json()
-    console.log('题目列表:', questionList.value);
-  } catch (err) {
-    console.error('加载失败')
   }
 }
 
@@ -454,12 +595,42 @@ const handleLogout = () => {
 </script>
 
 <style scoped>
+/* 原有样式保持不变，仅添加筛选控件样式 */
+.filter-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.filter-select {
+  padding: 0.5rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  outline: none;
+  cursor: pointer;
+}
+.filter-select:focus {
+  border-color: #2b6cb0;
+}
+.btn-reset {
+  padding: 0.5rem 1rem;
+  background: #f7fafc;
+  color: #4a5568;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.btn-reset:hover {
+  background: #e2e8f0;
+}
 .admin-dashboard {
   min-height: 100vh;
-  background-color: #f5f7fa;
+  /* 统一淡蓝渐变 */
+  background: linear-gradient(135deg, #d6f4ff 0%, #a8dfff 100%);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
-
 /* 顶部导航 */
 .admin-header {
   background: white;
@@ -471,7 +642,7 @@ const handleLogout = () => {
 }
 .admin-header h1 {
   margin: 0;
-  color: #333;
+  color: #2b6cb0;
   font-size: 1.4rem;
 }
 .header-right {
@@ -481,56 +652,56 @@ const handleLogout = () => {
 }
 .btn-logout {
   padding: 0.5rem 1.2rem;
-  background: #f5f5f5;
-  color: #666;
-  border: 1px solid #e8e8e8;
+  background: #f7fafc;
+  color: #4a5568;
+  border: 1px solid #e2e8f0;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 .btn-logout:hover {
-  background: #e8e8e8;
+  background: #e2e8f0;
 }
-
 /* 标签页 */
 .tab-nav {
   display: flex;
   gap: 0.5rem;
   background: white;
   padding: 0 2rem;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid #e2e8f0;
+  overflow-x: auto;
 }
 .tab-item {
-  padding: 1rem 1.5rem;
+  padding: 1rem 1.2rem;
   cursor: pointer;
-  color: #666;
+  color: #4a5568;
   font-weight: 500;
   border-bottom: 3px solid transparent;
   transition: all 0.3s ease;
+  white-space: nowrap;
 }
 .tab-item:hover {
-  color: #667eea;
+  color: #2b6cb0;
 }
 .tab-item.active {
-  color: #667eea;
-  border-bottom-color: #667eea;
+  color: #2b6cb0;
+  border-bottom-color: #2b6cb0;
 }
-
 /* 内容区 */
 .tab-content {
   max-width: 1200px;
   margin: 2rem auto;
-  padding: 0 2rem;
+  padding: 0 1rem;
 }
 .form-card, .list-card {
   background: white;
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 2rem;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
 }
 .form-card h3, .list-card h3 {
   margin: 0 0 1.5rem 0;
-  color: #333;
+  color: #2d3748;
 }
 .form-row, .options-row {
   display: grid;
@@ -547,7 +718,7 @@ const handleLogout = () => {
 .form-group label {
   display: block;
   margin-bottom: 0.5rem;
-  color: #333;
+  color: #2d3748;
   font-weight: 500;
 }
 .form-group input,
@@ -555,7 +726,7 @@ const handleLogout = () => {
 .form-group textarea {
   width: 100%;
   padding: 0.8rem;
-  border: 1px solid #e8e8e8;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
   font-size: 1rem;
   outline: none;
@@ -565,12 +736,12 @@ const handleLogout = () => {
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
-  border-color: #667eea;
+  border-color: #2b6cb0;
 }
 .btn-submit {
   width: 100%;
   padding: 1rem;
-  background: #667eea;
+  background: #2b6cb0;
   color: white;
   border: none;
   border-radius: 8px;
@@ -581,19 +752,18 @@ const handleLogout = () => {
   margin-top: 1rem;
 }
 .btn-submit:hover {
-  background: #5568d3;
+  background: #2c5282;
 }
-
 /* 批量导入 */
 .tips {
-  color: #666;
+  color: #718096;
   margin-bottom: 1rem;
 }
 .batch-textarea {
   width: 100%;
   min-height: 300px;
   padding: 1rem;
-  border: 1px solid #e8e8e8;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
   font-family: 'Consolas', monospace;
   font-size: 0.95rem;
@@ -603,24 +773,26 @@ const handleLogout = () => {
 .import-result {
   margin-top: 1rem;
   padding: 1rem;
-  background: #f6ffed;
-  border: 1px solid #b7eb8f;
+  background: #f0fff4;
+  border: 1px solid #9ae6b4;
   border-radius: 8px;
-  color: #52c41a;
+  color: #38a169;
   font-weight: 500;
 }
-
 /* 列表公共样式 */
 .list-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 .list-actions {
   display: flex;
   gap: 1rem;
   align-items: center;
+  flex-wrap: wrap;
 }
 .select-all {
   display: flex;
@@ -631,7 +803,7 @@ const handleLogout = () => {
 }
 .btn-batch-delete {
   padding: 0.6rem 1.2rem;
-  background: #f56c6c;
+  background: #e53e3e;
   color: white;
   border: none;
   border-radius: 6px;
@@ -639,22 +811,22 @@ const handleLogout = () => {
   transition: background 0.3s ease;
 }
 .btn-batch-delete:hover:not(:disabled) {
-  background: #f14545;
+  background: #c53030;
 }
 .btn-batch-delete:disabled {
-  background: #f8b3b3;
+  background: #feb2b2;
   cursor: not-allowed;
 }
 .btn-refresh {
   padding: 0.6rem 1.2rem;
-  background: #f5f5f5;
-  color: #666;
-  border: 1px solid #e8e8e8;
+  background: #f7fafc;
+  color: #4a5568;
+  border: 1px solid #e2e8f0;
   border-radius: 6px;
   cursor: pointer;
 }
 .btn-refresh:hover {
-  background: #e8e8e8;
+  background: #e2e8f0;
 }
 .question-list, .user-list {
   display: flex;
@@ -665,10 +837,10 @@ const handleLogout = () => {
   display: flex;
   align-items: flex-start;
   gap: 1rem;
-  background: #f8f9fa;
+  background: #f7fafc;
   padding: 1rem;
   border-radius: 8px;
-  border-left: 4px solid #667eea;
+  border-left: 4px solid #2b6cb0;
 }
 .item-checkbox {
   margin-top: 0.3rem;
@@ -685,30 +857,39 @@ const handleLogout = () => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.8rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 .item-tag {
-  background: #667eea15;
-  color: #667eea;
+  background: #ebf8ff;
+  color: #2b6cb0;
   padding: 0.3rem 0.8rem;
   border-radius: 4px;
   font-size: 0.9rem;
   font-weight: 500;
 }
 .item-question, .user-name {
-  color: #333;
+  color: #2d3748;
   margin-bottom: 0.5rem;
   line-height: 1.6;
   font-weight: 600;
 }
+/* 新增：题目列表中的图片样式 */
+.item-question img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 0.5rem 0;
+}
 .item-answer, .user-meta {
-  color: #666;
+  color: #4a5568;
   font-size: 0.95rem;
 }
 .user-meta span {
   margin-right: 1rem;
 }
 .user-bio {
-  color: #999;
+  color: #718096;
   font-size: 0.9rem;
   margin-top: 0.3rem;
 }
@@ -724,24 +905,23 @@ const handleLogout = () => {
 }
 .btn-delete {
   padding: 0.4rem 1rem;
-  background: #fff2f0;
-  color: #ff4d4f;
-  border: 1px solid #ffccc7;
+  background: #fff5f5;
+  color: #e53e3e;
+  border: 1px solid #feb2b2;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 .btn-delete:hover {
-  background: #ff4d4f;
+  background: #e53e3e;
   color: white;
 }
 .empty-tip {
   text-align: center;
-  color: #999;
+  color: #718096;
   padding: 2rem;
 }
-
-/* 响应式 */
+/* 手机适配 */
 @media (max-width: 900px) {
   .form-row, .options-row {
     grid-template-columns: 1fr;
@@ -754,5 +934,26 @@ const handleLogout = () => {
     margin-right: 0;
     margin-bottom: 1rem;
   }
+  .tab-nav {
+    padding: 0 1rem;
+  }
+  .tab-item {
+    padding: 1rem 0.8rem;
+  }
+}
+
+/* 上传图片按钮样式 */
+.btn-upload-img {
+  padding: 0.6rem 1.2rem;
+  background: #2b6cb0;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+.btn-upload-img:hover {
+  background: #2c5282;
 }
 </style>

@@ -100,85 +100,105 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* 添加筛选样式 */
-.filter {
-  margin-bottom: 20px;
-  text-align: right;
-}
-.filter select {
-  padding: 5px 10px;
-  margin-left: 10px;
-}
-.loading {
-  text-align: center;
-  color: #999;
-  padding: 40px 0;
-}
-.remove-btn {
-  margin-top: 10px;
-  background: #f56c6c;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 5px 10px;
-  cursor: pointer;
-}
-
 .error-book {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #d6f4ff 0%, #a8dfff 100%);
   max-width: 800px;
-  margin: 40px auto;
-  padding: 0 20px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 h2 {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 1.5rem;
+  color: #2b6cb0;
 }
-.empty {
-  text-align: center;
-  color: #999;
-  padding: 40px 0;
+.filter {
+  margin-bottom: 1rem;
+  text-align: right;
 }
-.list {
-  margin-bottom: 30px;
-}
-.item {
-  border: 1px solid #eee;
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 15px;
-}
-.item h4 {
-  margin-bottom: 10px;
-}
-.item p {
-  color: #666;
-  margin: 5px 0;
-}
-.back-btn {
-  display: block;
-  margin: 0 auto;
-  padding: 10px 20px;
-  background: #409eff;
-  color: white;
-  border: none;
+.filter select {
+  padding: 0.5rem 1rem;
+  margin-left: 0.5rem;
+  border: 1px solid #e2e8f0;
   border-radius: 6px;
-  cursor: pointer;
+  background: white;
 }
 .action-bar {
   text-align: right;
-  margin-bottom: 20px;
+  margin-bottom: 1rem;
 }
 .btn-start {
-  background: #67c23a;
+  background: #2b6cb0;
   color: white;
   border: none;
-  padding: 10px 20px;
+  padding: 0.6rem 1.2rem;
   border-radius: 6px;
-  font-size: 16px;
+  font-size: 0.9rem;
   cursor: pointer;
   transition: background 0.3s;
 }
 .btn-start:hover {
-  background: #5755e4;
+  background: #2c5282;
+}
+.loading {
+  text-align: center;
+  color: #718096;
+  padding: 2rem 0;
+}
+.empty {
+  text-align: center;
+  color: #718096;
+  padding: 3rem 0;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+.list {
+  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.item {
+  background: white;
+  border: 1px solid #bee3f8;
+  border-radius: 12px;
+  padding: 1.2rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+.item h4 {
+  margin-bottom: 0.8rem;
+  color: #2d3748;
+  line-height: 1.5;
+}
+.item p {
+  color: #4a5568;
+  margin: 0.4rem 0;
+  font-size: 0.9rem;
+}
+.remove-btn {
+  margin-top: 0.8rem;
+  background: #e53e3e;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.back-btn {
+  display: block;
+  margin: 0 auto;
+  padding: 0.6rem 1.5rem;
+  background: #2b6cb0;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+.back-btn:hover {
+  background: #2c5282;
 }
 </style>

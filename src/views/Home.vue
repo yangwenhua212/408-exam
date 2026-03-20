@@ -2,8 +2,8 @@
   <div class="home-container">
     <!-- 顶部居中标题 -->
     <header class="home-header">
-      <h1>计算机408刷题系统</h1>
-      <p>一站式备考，高效提升</p>
+      <h1>题计划Lab</h1>
+      <p>计算机专业刷题系统</p>
     </header>
 
     <!-- 欢迎栏 + 个人卡片 布局 -->
@@ -33,28 +33,28 @@
     <div class="card-grid" v-if="isLoggedIn">
       <!-- 日常刷题 -->
       <div class="card" @click="goToExam">
-        <div class="card-icon">📝</div>
+        <div class="card-icon"></div>
         <h3>日常刷题</h3>
         <p>按科目专项练习，巩固知识点</p>
       </div>
 
       <!-- 模拟考试 -->
       <div class="card" @click="goToMockExam">
-        <div class="card-icon">🎯</div>
-        <h3>模拟考试</h3>
-        <p>90分钟限时，全真模拟考场</p>
+        <div class="card-icon"></div>
+        <h3>真题测试</h3>
+        <p>90分钟限时</p>
       </div>
 
       <!-- 错题本 -->
       <div class="card" @click="goToErrorBook">
-        <div class="card-icon">📚</div>
+        <div class="card-icon"></div>
         <h3>错题本</h3>
         <p>回顾错题，查漏补缺</p>
       </div>
 
       <!-- 管理员后台：仅admin登录时显示 -->
       <div class="card" @click="goToAdmin" v-if="isAdmin">
-        <div class="card-icon">🔐</div>
+        <div class="card-icon"></div>
         <h3>管理员后台</h3>
         <p>登录管理题库，批量导入题目</p>
       </div>
@@ -119,85 +119,83 @@ const handleLogout = () => {
 <style scoped>
 .home-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 3rem 2rem;
+  /* 淡蓝色渐变背景 */
+  background: linear-gradient(135deg, #d6f4ff 0%, #85c9f0 100%);
+  color: #2d3748;
+  padding: 2rem 1rem;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
-
 .home-header {
   text-align: center;
-  margin-bottom: 2.5rem;
+  margin-bottom: 2rem;
 }
 .home-header h1 {
-  font-size: 2.5rem;
+  font-size: 2rem;
   margin-bottom: 0.5rem;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+  color: #2b6cb0;
 }
 .home-header p {
-  font-size: 1.1rem;
+  font-size: 1rem;
   opacity: 0.9;
   margin: 0;
 }
-
 .welcome-row {
   width: 100%;
-  max-width: 1000px;
+  max-width: 600px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
 }
-
 .welcome-bar {
-  flex: 1;
+  width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(255, 255, 255, 0.1);
-  padding: 1rem 1.5rem;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 1rem;
   border-radius: 12px;
   backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 .btn-logout {
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: white;
+  background: #fff;
+  border: 1px solid #90cdf4;
+  color: #2b6cb0;
   padding: 0.5rem 1rem;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 .btn-logout:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: #bee3f8;
 }
-
 .user-info-mini {
-  background: rgba(255, 255, 255, 0.15);
+  width: 100%;
+  background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(10px);
   border-radius: 12px;
-  padding: 1rem 1.2rem;
+  padding: 1rem;
   display: flex;
   align-items: center;
   gap: 0.8rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid #bee3f8;
   cursor: pointer;
   transition: all 0.3s ease;
-  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 .user-info-mini:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 1);
   transform: translateY(-2px);
 }
 .mini-avatar {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  border: 2px solid #90cdf4;
   object-fit: cover;
 }
 .mini-text {
@@ -207,21 +205,24 @@ const handleLogout = () => {
   font-weight: 600;
   font-size: 1rem;
   margin-bottom: 0.1rem;
+  color: #2d3748;
 }
 .mini-desc {
   font-size: 0.8rem;
   opacity: 0.8;
+  color: #4a5568;
 }
 .mini-arrow {
   font-size: 1.4rem;
   opacity: 0.7;
   font-weight: 300;
+  color: #2b6cb0;
 }
-
 .action-buttons {
   display: flex;
   gap: 1rem;
   justify-content: center;
+  margin-top: 2rem;
 }
 .btn {
   padding: 0.8rem 2rem;
@@ -231,78 +232,70 @@ const handleLogout = () => {
   border: none;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 .btn-primary {
-  background: white;
-  color: #667eea;
+  background: #2b6cb0;
+  color: white;
 }
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 6px 20px rgba(43, 108, 176, 0.3);
 }
 .btn-secondary {
-  background: transparent;
-  color: white;
-  border: 2px solid white;
+  background: white;
+  color: #2b6cb0;
+  border: 2px solid #2b6cb0;
 }
 .btn-secondary:hover {
-  background: white;
-  color: #667eea;
+  background: #bee3f8;
+  color: #2b6cb0;
 }
-
-/* 功能卡片网格 */
 .card-grid {
   width: 100%;
-  max-width: 1000px;
+  max-width: 600px;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
-  margin-top: 2rem;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-top: 1.5rem;
 }
 .card {
-  background: rgba(255, 255, 255, 0.1);
+  background: white;
   backdrop-filter: blur(10px);
   border-radius: 16px;
-  padding: 2rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 1.5rem;
+  border: 1px solid #bee3f8;
   cursor: pointer;
   transition: all 0.3s ease;
   text-align: center;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
 }
 .card:hover {
-  background: rgba(255, 255, 255, 0.2);
   transform: translateY(-5px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 12px 32px rgba(43, 108, 176, 0.15);
+  border-color: #90cdf4;
 }
 .card-icon {
-  font-size: 3rem;
+  font-size: 2.5rem;
   margin-bottom: 1rem;
+  color: #2b6cb0;
 }
 .card h3 {
-  font-size: 1.4rem;
+  font-size: 1.2rem;
   margin-bottom: 0.5rem;
+  color: #2d3748;
 }
 .card p {
   opacity: 0.9;
   margin: 0;
+  color: #4a5568;
+  font-size: 0.9rem;
 }
 
-/* 响应式适配 */
-@media (max-width: 768px) {
-  .welcome-row {
-    flex-direction: column;
-    width: 100%;
-  }
-  .welcome-bar {
-    width: 100%;
-  }
-  .user-info-mini {
-    width: 100%;
-    justify-content: center;
-  }
+/* 手机适配 */
+@media (min-width: 500px) {
   .card-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 </style>

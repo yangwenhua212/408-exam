@@ -178,76 +178,110 @@ function initCharts() {
    router.push('/')
  }
  </script>
- <style scoped>
- .stats {
-   max-width: 1200px;
-   margin: 40px auto;
-   padding: 0 20px;
- }
- h2 {
-   text-align: center;
-   margin-bottom: 30px;
- }
- .cards {
-   display: grid;
-   grid-template-columns: repeat(2, 1fr);
-   gap: 20px;
-   margin-bottom: 30px;
- }
- .card {
-   border: 1px solid #eee;
-   border-radius: 8px;
-   padding: 20px;
-   text-align: center;
- }
- .card h3 {
-   color: #666;
-   margin-bottom: 10px;
- }
- .card p {
-   font-size: 24px;
-   font-weight: bold;
-   color: #409eff;
- }
- .charts {
-   display: flex;
-   justify-content: space-around;
-   flex-wrap: wrap;
-   gap: 20px;
-   margin-bottom: 30px;
- }
- .chart-container {
-   width: 400px;
-   height: 300px;
-   border: 1px solid #eee;
-   border-radius: 8px;
-   padding: 10px;
- }
- .history {
-   margin-bottom: 30px;
- }
- .history h3 {
-   text-align: center;
-   margin-bottom: 15px;
- }
- .history-list {
-   max-width: 600px;
-   margin: 0 auto;
- }
- .history-item {
-   display: flex;
-   justify-content: space-between;
-   padding: 10px;
-   border-bottom: 1px solid #eee;
- }
- .back-btn {
-   display: block;
-   margin: 0 auto;
-   padding: 10px 20px;
-   background: #409eff;
-   color: white;
-   border: none;
-   border-radius: 6px;
-   cursor: pointer;
- }
- </style>
+<style scoped>
+.stats {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #d6f4ff 0%, #a8dfff 100%);
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+h2 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  color: #2b6cb0;
+}
+.cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.card {
+  background: white;
+  border: 1px solid #bee3f8;
+  border-radius: 12px;
+  padding: 1.2rem;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+.card h3 {
+  color: #4a5568;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+.card p {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #2b6cb0;
+}
+.charts {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+.chart-container {
+  width: 100%;
+  height: 260px;
+  background: white;
+  border: 1px solid #bee3f8;
+  border-radius: 12px;
+  padding: 0.8rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  box-sizing: border-box;
+}
+.history {
+  margin-bottom: 2rem;
+  background: white;
+  border-radius: 12px;
+  padding: 1.2rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+.history h3 {
+  text-align: center;
+  margin-bottom: 1rem;
+  color: #2d3748;
+}
+.history-list {
+  max-width: 600px;
+  margin: 0 auto;
+}
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.8rem;
+  border-bottom: 1px solid #e2e8f0;
+  color: #4a5568;
+  font-size: 0.9rem;
+}
+.history-item:last-child {
+  border-bottom: none;
+}
+.back-btn {
+  display: block;
+  margin: 0 auto;
+  padding: 0.6rem 1.5rem;
+  background: #2b6cb0;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+.back-btn:hover {
+  background: #2c5282;
+}
+
+/* 平板适配 */
+@media (min-width: 768px) {
+  .charts {
+    flex-direction: row;
+    justify-content: space-around;
+  }
+  .chart-container {
+    width: 48%;
+  }
+}
+</style>
