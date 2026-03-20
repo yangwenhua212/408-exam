@@ -31,29 +31,29 @@
 
     <!-- 功能卡片区域（仅登录后显示） -->
     <div class="card-grid" v-if="isLoggedIn">
-      <!-- 日常刷题 -->
-      <div class="card" @click="goToExam">
+      <!-- 日常刷题 - 橙色渐变 -->
+      <div class="card card-orange" @click="goToExam">
         <div class="card-icon"></div>
         <h3>日常刷题</h3>
         <p>按科目专项练习，巩固知识点</p>
       </div>
 
-      <!-- 模拟考试 -->
-      <div class="card" @click="goToMockExam">
+      <!-- 真题测试 - 深蓝色渐变 -->
+      <div class="card card-deepblue" @click="goToMockExam">
         <div class="card-icon"></div>
         <h3>真题测试</h3>
         <p>90分钟限时</p>
       </div>
 
-      <!-- 错题本 -->
-      <div class="card" @click="goToErrorBook">
+      <!-- 错题本 - 浅绿色渐变 -->
+      <div class="card card-lightgreen" @click="goToErrorBook">
         <div class="card-icon"></div>
         <h3>错题本</h3>
         <p>回顾错题，查漏补缺</p>
       </div>
 
-      <!-- 管理员后台：仅admin登录时显示 -->
-      <div class="card" @click="goToAdmin" v-if="isAdmin">
+      <!-- 管理员后台 - 深黄色渐变 -->
+      <div class="card card-deepyellow" @click="goToAdmin" v-if="isAdmin">
         <div class="card-icon"></div>
         <h3>管理员后台</h3>
         <p>登录管理题库，批量导入题目</p>
@@ -69,7 +69,7 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 const isLoggedIn = ref(false)
 const username = ref('')
-const isAdmin = ref(false) // 新增：管理员标识
+const isAdmin = ref(false)
 
 const userInfo = reactive({
   username: '',
@@ -92,12 +92,10 @@ const loadUserInfo = () => {
       bio: parsedUser.bio || '',
       avatar: parsedUser.avatar || ''
     })
-    // 核心判断：是否为管理员账号
     isAdmin.value = parsedUser.username === 'admin'
   }
 }
 
-// 所有跳转函数
 const goToUserHome = () => router.push('/user')
 const goToLogin = () => router.push('/login')
 const goToRegister = () => router.push('/register')
@@ -106,11 +104,10 @@ const goToMockExam = () => router.push('/exam-mock')
 const goToErrorBook = () => router.push('/error-book')
 const goToAdmin = () => router.push('/admin')
 
-// 退出登录
 const handleLogout = () => {
   localStorage.removeItem('currentUser')
   isLoggedIn.value = false
-  isAdmin.value = false // 重置管理员标识
+  isAdmin.value = false
   username.value = ''
   router.push('/')
 }
@@ -119,7 +116,6 @@ const handleLogout = () => {
 <style scoped>
 .home-container {
   min-height: 100vh;
-  /* 淡蓝色渐变背景 */
   background: linear-gradient(135deg, #d6f4ff 0%, #85c9f0 100%);
   color: #2d3748;
   padding: 2rem 1rem;
@@ -150,16 +146,21 @@ const handleLogout = () => {
   gap: 1rem;
   margin-bottom: 1.5rem;
 }
+/* 欢迎卡片 - 深蓝色背景，白色文字 */
 .welcome-bar {
   width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(255, 255, 255, 0.8);
+  background: #2b6cb0;        /* 纯色深蓝 */
   padding: 1rem;
   border-radius: 12px;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.welcome-bar p {
+  color: white;
+  margin: 0;
+  font-weight: 500;
 }
 .btn-logout {
   background: #fff;
@@ -173,22 +174,21 @@ const handleLogout = () => {
 .btn-logout:hover {
   background: #bee3f8;
 }
+/* 个人主页卡片 - 深蓝色背景，白色文字 */
 .user-info-mini {
   width: 100%;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
+  background: #2b6cb0;
   border-radius: 12px;
   padding: 1rem;
   display: flex;
   align-items: center;
   gap: 0.8rem;
-  border: 1px solid #bee3f8;
+  border: 1px solid #90cdf4;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 .user-info-mini:hover {
-  background: rgba(255, 255, 255, 1);
   transform: translateY(-2px);
 }
 .mini-avatar {
@@ -205,12 +205,12 @@ const handleLogout = () => {
   font-weight: 600;
   font-size: 1rem;
   margin-bottom: 0.1rem;
-  color: #2d3748;
+  color: white;
 }
 .mini-desc {
   font-size: 0.8rem;
   opacity: 0.8;
-  color: #4a5568;
+  color: white;
 }
 .mini-arrow {
   font-size: 1.4rem;
@@ -260,11 +260,9 @@ const handleLogout = () => {
   margin-top: 1.5rem;
 }
 .card {
-  background: white;
-  backdrop-filter: blur(10px);
   border-radius: 16px;
   padding: 1.5rem;
-  border: 1px solid #bee3f8;
+  border: none;
   cursor: pointer;
   transition: all 0.3s ease;
   text-align: center;
@@ -272,26 +270,45 @@ const handleLogout = () => {
 }
 .card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 12px 32px rgba(43, 108, 176, 0.15);
-  border-color: #90cdf4;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.2);
 }
 .card-icon {
   font-size: 2.5rem;
   margin-bottom: 1rem;
-  color: #2b6cb0;
 }
 .card h3 {
   font-size: 1.2rem;
   margin-bottom: 0.5rem;
-  color: #2d3748;
 }
 .card p {
   opacity: 0.9;
   margin: 0;
-  color: #4a5568;
   font-size: 0.9rem;
 }
-
+/* 渐变色背景 */
+.card-orange {
+  background: linear-gradient(135deg, #2b6cb0, #85c9f0);
+  color: #fff;
+}
+.card-deepblue {
+  background: linear-gradient(135deg, #85c9f0, #2b6cb0);
+  color: #fff;
+}
+.card-lightgreen {
+  background: linear-gradient(135deg, #2b6cb0, #85c9f0);
+  color: #1e293b;
+}
+.card-deepyellow {
+  background: linear-gradient(135deg, #85c9f0, #2b6cb0);
+  color: #1e293b;
+}
+/* 确保文字可读 */
+.card-orange h3,
+.card-orange p,
+.card-deepblue h3,
+.card-deepblue p {
+  color: #fff;
+}
 /* 手机适配 */
 @media (min-width: 500px) {
   .card-grid {
