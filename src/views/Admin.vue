@@ -259,6 +259,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import request from '@/utils/request';
 
 const router = useRouter()
 const adminUsername = ref('')
@@ -346,30 +347,6 @@ watch(selectedIds, (newVal) => {
   }
 })
 
-// 批量删除
-const batchDelete = async () => {
-  if (selectedIds.value.length === 0) return
-  if (!confirm(`确定要删除选中的 ${selectedIds.value.length} 道题目吗？`)) return
-
-  try {
-    const res = await fetch('/api/questions/batch', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids: selectedIds.value })
-    })
-    const data = await res.json()
-    if (data.success) {
-      alert(`✅ 成功删除 ${data.deletedCount} 道题目`)
-      selectedIds.value = []
-      await loadQuestionList()
-    } else {
-      alert('删除失败：' + data.error)
-    }
-  } catch (err) {
-    console.error(err)
-    alert('请求失败')
-  }
-}
 
 // 图片上传
 const triggerUpload = () => {
@@ -378,80 +355,40 @@ const triggerUpload = () => {
   }
 }
 
-const handleImageUpload = async (e) => {
-  const file = e.target.files[0]
-  if (!file) return
-
-  const formData = new FormData()
-  formData.append('image', file)
-
-  try {
-    const baseUrl = import.meta.env.DEV ? 'http://localhost:3000' : ''
-    const res = await fetch(`${baseUrl}/api/upload-image`, {
-      method: 'POST',
-      body: formData
-    })
-    const data = await res.json()
-
-    if (data.success) {
-      const imgTag = `<br><img src="${data.url}" style="max-width:100%;height:auto;border-radius:8px;margin:1rem 0;" /><br>`
-      singleForm.question += imgTag
-      if (imageInput.value) {
-        imageInput.value.value = ''
-      }
-      alert('✅ 图片上传成功！已自动插入到题干中～')
-    } else {
-      alert('❌ 上传失败：' + data.error)
-    }
-  } catch (err) {
-    console.error('上传出错：', err)
-    alert('❌ 上传失败！请检查后端服务是否启动～')
-  }
-}
 
 // 加载科目列表
 const loadSubjects = async () => {
   try {
-    const res = await fetch('/api/subjects')
-    if (res.ok) {
-      subjectOptions.value = await res.json()
-    }
+    subjectOptions.value = await request.get('/subjects');
   } catch (err) {
-    console.error('加载科目列表失败', err)
+    console.error('加载科目列表失败', err);
   }
-}
+};
 
-// 加载题型列表
 const loadQuestionTypes = async () => {
   try {
-    const res = await fetch('/api/question-types')
-    if (res.ok) {
-      const types = await res.json()
-      questionTypes.value = types
-    }
+    const types = await request.get('/question-types');
+    questionTypes.value = types;
   } catch (err) {
-    console.error('加载题型列表失败', err)
+    console.error('加载题型列表失败', err);
   }
-}
-
+};
 // 加载题目列表（支持筛选）
 const loadQuestionList = async () => {
   try {
-    const params = new URLSearchParams()
-    if (filterSubject.value) params.append('subject', filterSubject.value)
-    if (filterYear.value) params.append('year', filterYear.value)
-    if (filterType.value) params.append('questionType', filterType.value)
-    
-    const url = `/api/questions?${params.toString()}`
-    const res = await fetch(url)
-    questionList.value = await res.json()
-    // 重置全选状态
-    selectedIds.value = []
-    selectAll.value = false
+    const params = {
+      subject: filterSubject.value || undefined,
+      year: filterYear.value || undefined,
+      questionType: filterType.value || undefined,
+    };
+    const data = await request.get('/questions', { params });
+    questionList.value = data;
+    selectedIds.value = [];
+    selectAll.value = false;
   } catch (err) {
-    console.error('加载题目失败', err)
+    console.error('加载题目失败', err);
   }
-}
+};
 
 // 重置筛选条件
 const resetFilters = () => {
@@ -489,8 +426,8 @@ onMounted(() => {
 // 添加单题
 const addSingleQuestion = async () => {
   if (!singleForm.question || !singleForm.optionA) {
-    alert('请填写完整题目和选项')
-    return
+    alert('请填写完整题目和选项');
+    return;
   }
   
   const question = {
@@ -508,84 +445,113 @@ const addSingleQuestion = async () => {
     difficulty: singleForm.difficulty,
     type: singleForm.type,
     questionType: singleForm.questionType
-  }
+  };
   
   try {
-    const res = await fetch('/api/questions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(question)
-    })
-    
-    if (res.ok) {
-      alert('✅ 添加成功！')
-      singleForm.question = ''
-      singleForm.optionA = ''
-      singleForm.optionB = ''
-      singleForm.optionC = ''
-      singleForm.optionD = ''
-      singleForm.analysis = ''
-      loadQuestionList()
-    }
+    await request.post('/questions', question);
+    alert('✅ 添加成功！');
+    singleForm.question = '';
+    singleForm.optionA = '';
+    singleForm.optionB = '';
+    singleForm.optionC = '';
+    singleForm.optionD = '';
+    singleForm.analysis = '';
+    loadQuestionList();
   } catch (err) {
-    alert('添加失败')
+    alert('添加失败');
   }
-}
+};
 
 // 批量导入
 const batchImport = async () => {
   try {
-    const questions = JSON.parse(batchText.value)
-    const res = await fetch('/api/admin/batch-import', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(questions)
-    })
-    
-    if (res.ok) {
-      importResult.value = await res.json()
-      alert(`✅ 导入完成！成功：${importResult.value.successCount} 题`)
-      batchText.value = ''
-      loadQuestionList()
-    }
+    const questions = JSON.parse(batchText.value);
+    const result = await request.post('/admin/batch-import', questions);
+    importResult.value = result;
+    alert(`✅ 导入完成！成功：${result.successCount} 题`);
+    batchText.value = '';
+    loadQuestionList();
   } catch (err) {
-    alert('JSON格式错误，请检查输入')
+    alert('JSON格式错误，请检查输入');
   }
-}
+};
 
 // 删除单个题目
 const deleteQuestion = async (id) => {
-  if (!confirm('确定要删除这道题吗？')) return
+  if (!confirm('确定要删除这道题吗？')) return;
   try {
-    await fetch(`/api/questions/${id}`, { method: 'DELETE' })
-    alert('✅ 删除成功')
-    loadQuestionList()
+    await request.delete(`/questions/${id}`);
+    alert('✅ 删除成功');
+    loadQuestionList();
   } catch (err) {
-    alert('删除失败')
+    alert('删除失败');
   }
-}
+};
+
+// 批量删除
+const batchDelete = async () => {
+  if (selectedIds.value.length === 0) return;
+  if (!confirm(`确定要删除选中的 ${selectedIds.value.length} 道题目吗？`)) return;
+
+  try {
+    const result = await request.delete('/questions/batch', { data: { ids: selectedIds.value } });
+    alert(`✅ 成功删除 ${result.deletedCount} 道题目`);
+    selectedIds.value = [];
+    await loadQuestionList();
+  } catch (err) {
+    console.error(err);
+    alert('请求失败');
+  }
+};
 
 // 加载用户列表
 const loadUserList = async () => {
   try {
-    const res = await fetch('/api/admin/users')
-    userList.value = await res.json()
+    userList.value = await request.get('/admin/users');
   } catch (err) {
-    console.error('用户列表加载失败')
+    console.error('用户列表加载失败');
   }
-}
+};
 
 // 删除用户
 const deleteUser = async (id) => {
-  if (!confirm('确定要删除该用户吗？此操作不可恢复！')) return
+  if (!confirm('确定要删除该用户吗？此操作不可恢复！')) return;
   try {
-    await fetch(`/api/admin/users/${id}`, { method: 'DELETE' })
-    alert('✅ 用户删除成功')
-    loadUserList()
+    await request.delete(`/admin/users/${id}`);
+    alert('✅ 用户删除成功');
+    loadUserList();
   } catch (err) {
-    alert('删除失败')
+    alert('删除失败');
   }
-}
+};
+
+const handleImageUpload = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append('image', file);
+
+  try {
+    const baseUrl = import.meta.env.DEV ? 'http://localhost:3000' : '';
+    const data = await request.post('/upload-image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    if (data.success) {
+      const imgTag = `<br><img src="${data.url}" style="max-width:100%;height:auto;border-radius:8px;margin:1rem 0;" /><br>`;
+      singleForm.question += imgTag;
+      if (imageInput.value) {
+        imageInput.value.value = '';
+      }
+      alert('✅ 图片上传成功！已自动插入到题干中～');
+    } else {
+      alert('❌ 上传失败：' + data.error);
+    }
+  } catch (err) {
+    console.error('上传出错：', err);
+    alert('❌ 上传失败！请检查后端服务是否启动～');
+  }
+};
 
 // 退出登录
 const handleLogout = () => {

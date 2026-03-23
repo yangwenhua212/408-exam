@@ -1,8 +1,15 @@
+require('dotenv').config();
+const bcrypt = require('bcryptjs');
+console.log('DB_USER:', process.env.DB_USER); // 临时调试，启动后查看输出
 const express = require('express')
 const cors = require('cors')
 const mysql = require('mysql2/promise')
 const path = require('path')
 const fs = require('fs')
+const authMiddleware = require('./middleware/auth.cjs');
+const adminMiddleware = require('./middleware/admin.cjs');
+
+
 
 // 新增：引入multer并配置上传
 const multer = require('multer')
@@ -56,10 +63,10 @@ async function initDBPool() {
           queueLimit: 0
         }
       : {
-          host: 'localhost',
-          user: 'root',
-          password: 'Yang123!',
-          database: 'exam_db',
+          host: process.env.DB_HOST,
+          user: process.env.DB_USER,
+          password: process.env.DB_PASSWORD,
+          database: process.env.DB_NAME,
           port: 3306,
           charset: 'utf8mb4',
           enableKeepAlive: true,
@@ -134,6 +141,7 @@ async function createTables() {
     FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE -- 删除题目时自动删除对应错题
   )`);
 
+
   // 自动修复字段类型
   try {
     await dbPool.execute(`ALTER TABLE users MODIFY avatar LONGTEXT`);
@@ -144,104 +152,156 @@ async function createTables() {
   } catch (err) {
     console.log('⚠️ 检查字段时出现非致命错误:', err.message);
   }
+
+  // 在 createTables 函数末尾添加
+const [adminExists] = await dbPool.execute('SELECT * FROM users WHERE username = ?', ['admin']);
+if (adminExists.length === 0) {
+  const hashedPwd = await bcrypt.hash('123456', 10);
+  await dbPool.execute(
+    'INSERT INTO users (username, password, registerTime) VALUES (?, ?, ?)',
+    ['admin', hashedPwd, new Date().toLocaleString()]
+  );
+}
 }
 
 // ---------------- 用户接口 ----------------
 // 注册
 app.post('/api/user/register', async (req, res) => {
-  const { username, password, phone, qq } = req.body
+  const { username, password, phone, qq } = req.body;
   if (!username || !password) {
-    return res.status(400).json({ error: '用户名和密码不能为空' })
+    return res.status(400).json({ error: '用户名和密码不能为空' });
   }
-  const registerTime = new Date().toLocaleString()
+  const registerTime = new Date().toLocaleString();
+
   try {
+    // 对密码进行哈希（10 为盐的复杂度）
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     const [result] = await dbPool.execute(
       `INSERT INTO users (username, password, phone, qq, registerTime, avatar) VALUES (?, ?, ?, ?, ?, ?)`,
-      [username, password, phone || null, qq || null, registerTime, '']
-    )
-    res.json({ success: true, id: result.insertId })
+      [username, hashedPassword, phone || null, qq || null, registerTime, '']
+    );
+    res.json({ success: true, id: result.insertId });
   } catch (err) {
     if (err.message.includes('Duplicate entry')) {
-      return res.status(400).json({ error: '用户名已被注册' })
+      return res.status(400).json({ error: '用户名已被注册' });
     }
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: err.message });
   }
-})
+});
 
-// 登录
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
 app.post('/api/user/login', async (req, res) => {
-  const { username, password } = req.body
+  const { username, password } = req.body;
   try {
+    // 先查出用户（使用 bcrypt 比较密码）
     const [rows] = await dbPool.execute(
-      'SELECT * FROM users WHERE username = ? AND password = ?',
-      [username, password]
-    )
-    if (rows.length > 0) {
-      const { password, ...userInfo } = rows[0]
-      res.json({ success: true, userInfo })
-    } else {
-      res.status(401).json({ error: '用户名或密码错误' })
+      'SELECT * FROM users WHERE username = ?',
+      [username]
+    );
+    if (rows.length === 0) {
+      return res.status(401).json({ error: '用户名或密码错误' });
     }
+    const user = rows[0];
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) {
+      return res.status(401).json({ error: '用户名或密码错误' });
+    }
+    // 生成 token
+    const token = jwt.sign(
+      { id: user.id, username: user.username },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    const { password: _, ...userInfo } = user; // 移除密码字段
+    res.json({ success: true, token, userInfo });
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: err.message });
   }
-})
+});
+// 登录
+// app.post('/api/user/login', async (req, res) => {
+//   const { username, password } = req.body
+//   try {
+//     const [rows] = await dbPool.execute(
+//       'SELECT * FROM users WHERE username = ? AND password = ?',
+//       [username, password]
+//     )
+//     if (rows.length > 0) {
+//       const { password, ...userInfo } = rows[0]
+//       res.json({ success: true, userInfo })
+//     } else {
+//       res.status(401).json({ error: '用户名或密码错误' })
+//     }
+//   } catch (err) {
+//     res.status(500).json({ error: err.message })
+//   }
+// })
 
 // 更新用户信息
-app.post('/api/user/update', async (req, res) => {
-  const { username, bio, location, avatar } = req.body
+app.post('/api/user/update', authMiddleware, async (req, res) => {
+  const { username, bio, location, avatar } = req.body;
+  // 只能修改自己的信息（通过 token 中的 username 匹配）
+  if (username !== req.user.username) {
+    return res.status(403).json({ error: '无权修改他人信息' });
+  }
   if (!username) {
-    return res.status(400).json({ error: '用户名不能为空' })
+    return res.status(400).json({ error: '用户名不能为空' });
   }
   try {
-    let sql = 'UPDATE users SET '
-    const values = []
-    const fields = []
+    let sql = 'UPDATE users SET ';
+    const values = [];
+    const fields = [];
 
     if (bio !== undefined) {
-      fields.push('bio = ?')
-      values.push(bio || null)
+      fields.push('bio = ?');
+      values.push(bio || null);
     }
     if (location !== undefined) {
-      fields.push('location = ?')
-      values.push(location || null)
+      fields.push('location = ?');
+      values.push(location || null);
     }
     if (avatar !== undefined && avatar !== null && avatar !== '') {
-      fields.push('avatar = ?')
-      values.push(avatar)
+      fields.push('avatar = ?');
+      values.push(avatar);
     }
 
     if (fields.length === 0) {
-      return res.json({ success: true })
+      return res.json({ success: true });
     }
 
-    sql += fields.join(', ') + ' WHERE username = ?'
-    values.push(username)
+    sql += fields.join(', ') + ' WHERE username = ?';
+    values.push(username);
 
-    await dbPool.execute(sql, values)
-    res.json({ success: true })
+    await dbPool.execute(sql, values);
+    res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: err.message });
   }
-})
+});
 
 // ---------------- 错题相关接口 ----------------
 // 保存错题
-app.post('/api/user/errors', async (req, res) => {
-  const { userId, questionId, subject, userAnswer } = req.body
-  if (!userId || !questionId || !subject || !userAnswer) {
-    return res.status(400).json({ error: '缺少必要参数' })
+app.post('/api/user/errors', authMiddleware, async (req, res) => {
+  const { questionId, subject, userAnswer } = req.body;
+  const userId = req.user.id; // 从 token 中获取当前登录用户的 ID
+
+  if (!questionId || !subject || !userAnswer) {
+    return res.status(400).json({ error: '缺少必要参数' });
   }
+
   try {
     await dbPool.execute(
       `INSERT IGNORE INTO user_errors (user_id, question_id, subject, user_answer) VALUES (?, ?, ?, ?)`,
       [userId, questionId, subject, userAnswer]
-    )
-    res.json({ success: true })
+    );
+    res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: err.message });
   }
-})
+});
 
 // 获取用户错题列表（支持按科目/题型筛选）
 app.get('/api/user/errors', async (req, res) => {
@@ -259,7 +319,6 @@ app.get('/api/user/errors', async (req, res) => {
     sql += ' AND e.subject = ?'
     params.push(subject)
   }
-  // 新增：按题型筛选错题
   if (questionType) {
     sql += ' AND q.question_type = ?'
     params.push(questionType)
@@ -269,45 +328,49 @@ app.get('/api/user/errors', async (req, res) => {
   try {
     const [rows] = await dbPool.execute(sql, params)
     rows.forEach(row => {
-      row.options = JSON.parse(row.options)
+      // 安全解析 options
+      if (row.options) {
+        try {
+          row.options = JSON.parse(row.options)
+        } catch (e) {
+          console.error(`解析 options 失败: question_id=${row.question_id}, options=${row.options}`, e)
+          row.options = []  // 降级处理
+        }
+      } else {
+        row.options = []
+      }
     })
     res.json(rows)
   } catch (err) {
+    console.error('❌ 获取错题列表失败:', err.stack)
     res.status(500).json({ error: err.message })
   }
 })
 
-// 批量删除题目（同步删除关联错题）
-app.delete('/api/questions/batch', async (req, res) => {
-  const { ids } = req.body; // 前端发送 { ids: [1,2,3] }
-  if (!ids || !Array.isArray(ids) || ids.length === 0) {
-    return res.status(400).json({ error: '请提供要删除的题目ID数组' });
-  }
+
+
+// 删除错题
+app.delete('/api/user/errors/:id', authMiddleware, async (req, res) => {
+  const errorId = req.params.id;
+  const userId = req.user.id;
   try {
-    // 使用占位符生成 IN (?,?,?)
-    const placeholders = ids.map(() => '?').join(',');
-    const [result] = await dbPool.execute(
-      `DELETE FROM questions WHERE id IN (${placeholders})`,
-      ids
+    // 先验证该错题是否属于当前用户
+    const [rows] = await dbPool.execute(
+      'SELECT user_id FROM user_errors WHERE id = ?',
+      [errorId]
     );
-    // 外键已配置ON DELETE CASCADE，错题会自动删除
-    res.json({ success: true, deletedCount: result.affectedRows });
+    if (rows.length === 0) {
+      return res.status(404).json({ error: '错题不存在' });
+    }
+    if (rows[0].user_id !== userId) {
+      return res.status(403).json({ error: '无权删除他人的错题' });
+    }
+    await dbPool.execute('DELETE FROM user_errors WHERE id = ?', [errorId]);
+    res.json({ success: true });
   } catch (err) {
-    console.error('❌ 批量删除错误:', err.stack);
     res.status(500).json({ error: err.message });
   }
 });
-
-// 删除错题
-app.delete('/api/user/errors/:id', async (req, res) => {
-  const { id } = req.params
-  try {
-    await dbPool.execute('DELETE FROM user_errors WHERE id = ?', [id])
-    res.json({ success: true })
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
-})
 
 // ---------------- 管理员接口 ----------------
 app.post('/api/admin/login', async (req, res) => {
@@ -328,7 +391,7 @@ app.post('/api/admin/login', async (req, res) => {
 })
 
 // 批量导入题目：新增question_type字段支持
-app.post('/api/admin/batch-import', async (req, res) => {
+app.post('/api/admin/batch-import', authMiddleware, adminMiddleware, async (req, res) => {
   const questions = req.body
   if (!Array.isArray(questions) || questions.length === 0) {
     return res.status(400).json({ error: '请提供有效的题目数组' })
@@ -361,7 +424,7 @@ app.post('/api/admin/batch-import', async (req, res) => {
   res.json({ success: true, successCount, failCount })
 })
 
-app.get('/api/admin/users', async (req, res) => {
+app.get('/api/admin/users', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const [rows] = await dbPool.execute(
       'SELECT id, username, phone, qq, bio, location, avatar, registerTime FROM users ORDER BY id DESC'
@@ -372,7 +435,7 @@ app.get('/api/admin/users', async (req, res) => {
   }
 })
 
-app.delete('/api/admin/users/:id', async (req, res) => {
+app.delete('/api/admin/users/:id', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     await dbPool.execute('DELETE FROM users WHERE id = ?', [req.params.id])
     res.json({ success: true })
@@ -410,7 +473,7 @@ app.get('/api/questions', async (req, res) => {
 })
 
 // 新增题目：支持题型字段
-app.post('/api/questions', async (req, res) => {
+app.post('/api/questions', authMiddleware, adminMiddleware, async (req, res) => {
   const { year, subject, question, options, answer, analysis, difficulty, type, questionType } = req.body
   try {
     const [result] = await dbPool.execute(
@@ -435,7 +498,7 @@ app.post('/api/questions', async (req, res) => {
 })
 
 // 删除题目：自动删除关联的错题（外键级联）
-app.delete('/api/questions/:id', async (req, res) => {
+app.delete('/api/questions/:id', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     await dbPool.execute('DELETE FROM questions WHERE id = ?', [req.params.id])
     // 外键已配置ON DELETE CASCADE，该题的options和关联错题会自动删除
@@ -444,6 +507,27 @@ app.delete('/api/questions/:id', async (req, res) => {
     res.status(500).json({ error: err.message })
   }
 })
+
+// 批量删除题目（同步删除关联错题）
+app.delete('/api/questions/batch', authMiddleware, adminMiddleware, async (req, res) => {
+  const { ids } = req.body; // 前端发送 { ids: [1,2,3] }
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: '请提供要删除的题目ID数组' });
+  }
+  try {
+    // 使用占位符生成 IN (?,?,?)
+    const placeholders = ids.map(() => '?').join(',');
+    const [result] = await dbPool.execute(
+      `DELETE FROM questions WHERE id IN (${placeholders})`,
+      ids
+    );
+    // 外键已配置ON DELETE CASCADE，错题会自动删除
+    res.json({ success: true, deletedCount: result.affectedRows });
+  } catch (err) {
+    console.error('❌ 批量删除错误:', err.stack);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // 获取用户错题详情（支持按科目/题型筛选）
 app.get('/api/user/errors/questions', async (req, res) => {
@@ -503,6 +587,19 @@ app.get('/api/question-types', async (req, res) => {
     res.status(500).json({ error: err.message })
   }
 })
+
+// 静态托管上传的图片
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// 上传图片（需登录且管理员）
+app.post('/api/upload-image', authMiddleware, adminMiddleware, upload.single('image'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: '未上传文件' });
+  }
+  // 返回图片可访问的 URL
+  const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+  res.json({ success: true, url: imageUrl });
+});
 
 // ---------------- 托管前端 ----------------
 const distPath = path.join(__dirname, 'dist')

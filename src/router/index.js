@@ -13,19 +13,34 @@ const routes = [
   { path: '/', name: 'Home', component: Home },
   { path: '/login', name: 'Login', component: Login },
   { path: '/register', name: 'Register', component: Register },
-  { path: '/user', name: 'UserHome', component: UserHome },
-  { path: '/exam', name: 'Exam', component: Exam },
-  { path: '/error-book', name: 'ErrorBook', component: ErrorBook },
-  { path: '/stats', name: 'Stats', component: Stats },
-  { path: '/exam-mock', name: 'ExamMock', component: ExamMock },
-  { path: '/admin', name: 'Admin', component: Admin },
-  { path: '/error-exam', name: 'ErrorExam', component: Exam }
+  { path: '/user', name: 'UserHome', component: UserHome, meta: { requiresAuth: true } },
+  { path: '/exam', name: 'Exam', component: Exam, meta: { requiresAuth: true } },
+  { path: '/error-book', name: 'ErrorBook', component: ErrorBook, meta: { requiresAuth: true } },
+  { path: '/stats', name: 'Stats', component: Stats, meta: { requiresAuth: true } },
+  { path: '/exam-mock', name: 'ExamMock', component: ExamMock, meta: { requiresAuth: true } },
+  { path: '/admin', name: 'Admin', component: Admin, meta: { requiresAuth: true, requiresAdmin: true } },
+  { path: '/error-exam', name: 'ErrorExam', component: Exam, meta: { requiresAuth: true } }
 ]
 
 const router = createRouter({
-  // 关键：传入base参数，和vite.config.js的base保持一致
-  history: createWebHashHistory('/408-exam/'), 
+  history: createWebHashHistory('/408-exam/'),
   routes
+})
+
+// 全局前置守卫
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem('token')
+  const user = JSON.parse(localStorage.getItem('currentUser') || '{}')
+
+  if (to.meta.requiresAuth && !token) {
+    // 未登录，跳转登录页
+    next('/login')
+  } else if (to.meta.requiresAdmin && user.username !== 'admin') {
+    // 不是管理员，跳转首页
+    next('/')
+  } else {
+    next()
+  }
 })
 
 export default router

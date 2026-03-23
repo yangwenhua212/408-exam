@@ -96,6 +96,7 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/userStore'
+import request from '@/utils/request';
 
 const route = useRoute()
 const router = useRouter()
@@ -230,25 +231,18 @@ const resetQuestionState = () => {
 
 // ---------- 错题本（对接后端）----------
 const addToErrorBook = async () => {
-  // 错题模式下不再重复添加错题
-  if (mode.value === 'error') return
-  if (!userStore.user?.id) return
+  if (mode.value === 'error') return;
+  if (!userStore.user?.id) return; // 可选，实际后端会通过 token 验证
   try {
-    await fetch('/api/user/errors', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: userStore.user.id,
-        questionId: currentQuestion.value.id,
-        subject: currentQuestion.value.subject,
-        userAnswer: userAnswer.value
-      })
-    })
+    await request.post('/user/errors', {
+      questionId: currentQuestion.value.id,
+      subject: currentQuestion.value.subject,
+      userAnswer: userAnswer.value
+    });
   } catch (err) {
-    console.error('保存错题失败', err)
+    console.error('保存错题失败', err);
   }
-}
-
+};
 // ---------- 初始化 ----------
 onMounted(async () => {
   await loadSubjects()

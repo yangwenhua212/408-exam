@@ -146,6 +146,7 @@
 <script setup>
 import { ref, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import request from '@/utils/request';
 
 const router = useRouter()
 
@@ -210,23 +211,18 @@ const reviewList = computed(() => {
 // 加载题目：只加载「真题」，随机抽取40道
 const loadQuestions = async () => {
   try {
-    let url = '/api/questions?type=真题'
-    if (selectedYear.value) {
-      url += `&year=${selectedYear.value}`
-    }
-    const res = await fetch(url)
-    let data = await res.json()
-    
-    // 题库不足40道时用全部题目，超过40道随机抽取40道
+    const params = { type: '真题' };
+    if (selectedYear.value) params.year = selectedYear.value;
+    let data = await request.get('/questions', { params });
     if (data.length > 40) {
-      data = data.sort(() => Math.random() - 0.5).slice(0, 40)
+      data = data.sort(() => Math.random() - 0.5).slice(0, 40);
     }
-    questionList.value = data
+    questionList.value = data;
   } catch (err) {
-    console.error('加载失败：', err)
-    alert('题目加载失败，请确保后端已启动')
+    console.error('加载失败：', err);
+    alert('题目加载失败，请确保后端已启动');
   }
-}
+};
 
 // 开始考试
 const startExam = async () => {

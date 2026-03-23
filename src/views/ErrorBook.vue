@@ -36,6 +36,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/userStore';
+import request from '@/utils/request';
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -55,12 +56,10 @@ const loadErrors = async () => {
   }
   loading.value = true;
   try {
-    let url = `/api/user/errors?userId=${userStore.user.id}`;
-    if (selectedSubject.value) {
-      url += `&subject=${encodeURIComponent(selectedSubject.value)}`;
-    }
-    const res = await fetch(url);
-    const data = await res.json();
+    let params = {};
+    if (selectedSubject.value) params.subject = selectedSubject.value;
+    // 如果有题型筛选，也可以加
+    const data = await request.get('/user/errors', { params });
     errorList.value = data;
   } catch (err) {
     console.error('加载错题失败', err);
@@ -82,7 +81,7 @@ const subjects = computed(() => {
 // 移除错题
 const removeError = async (id) => {
   try {
-    await fetch(`/api/user/errors/${id}`, { method: 'DELETE' });
+    await request.delete(`/user/errors/${id}`);
     // 重新加载列表
     loadErrors();
   } catch (err) {

@@ -54,15 +54,14 @@ const handleLogin = async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(loginForm.value)
     })
-
+    const data = await res.json()
     if (res.ok) {
-      const data = await res.json()
-      // 保存完整的用户信息（包含 avatar、bio、location 等）
+      // 保存 token 和用户信息
+      localStorage.setItem('token', data.token)
       localStorage.setItem('currentUser', JSON.stringify(data.userInfo))
       alert('登录成功！')
       router.push('/')
     } else {
-      const data = await res.json()
       alert(data.error || '用户名或密码错误')
     }
   } catch (err) {

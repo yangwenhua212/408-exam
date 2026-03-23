@@ -73,6 +73,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import request from '@/utils/request';
 
 const router = useRouter()
 const showEditModal = ref(false)
@@ -139,34 +140,24 @@ const handleFileUpload = (event) => {
 // 修改为异步更新后端
 const saveUserInfo = async () => {
   if (!editForm.username.trim()) {
-    alert('用户名不能为空！')
-    return
+    alert('用户名不能为空！');
+    return;
   }
 
   try {
-    const res = await fetch('/api/user/update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(editForm)
-    })
-
-    if (!res.ok) {
-      const error = await res.json()
-      alert(error.error || '更新失败')
-      return
-    }
-
+    await request.post('/user/update', editForm);
     // 更新 localStorage 和本地 userInfo
-    const oldUser = JSON.parse(localStorage.getItem('currentUser') || '{}')
-    const newUser = { ...oldUser, ...editForm }
-    localStorage.setItem('currentUser', JSON.stringify(newUser))
-    Object.assign(userInfo, newUser)
-    showEditModal.value = false
-    alert('保存成功！')
+    const oldUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    const newUser = { ...oldUser, ...editForm };
+    localStorage.setItem('currentUser', JSON.stringify(newUser));
+    Object.assign(userInfo, newUser);
+    showEditModal.value = false;
+    alert('保存成功！');
   } catch (err) {
-    alert('更新失败，请检查网络或后端是否启动')
+    alert('更新失败，请检查网络或后端是否启动');
   }
-}
+};
+
 
 const handleLogout = () => {
   localStorage.removeItem('currentUser')
