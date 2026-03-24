@@ -136,7 +136,7 @@ POST /api/user/errors – 保存错题（需认证）
 
 DELETE /api/user/errors/:id – 删除错题（需认证）
 
-更多接口请查看 server.js 或使用 Postman 测试。
+更多接口请查看 server.cjs 。
 
 项目结构
 text

@@ -7,6 +7,7 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const jwt = require('jsonwebtoken');
+const redis = require('redis');
 
 // 引入中间件
 const authMiddleware = require('./middleware/auth.cjs');
@@ -19,6 +20,77 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
 });
+
+// ========== Redis 客户端初始化 ==========
+let redisClient = null;
+if (process.env.REDIS_URL) {
+  redisClient = redis.createClient({ url: process.env.REDIS_URL });
+  redisClient.on('error', (err) => console.error('Redis Client Error', err));
+  redisClient.connect().then(() => console.log('✅ Redis 连接成功')).catch(console.error);
+} else {
+  console.log('⚠️ 未设置 REDIS_URL，将不使用缓存');
+}
+
+// ========== 缓存工具函数 ==========
+async function getCache(key) {
+  if (!redisClient || !redisClient.isOpen) return null;
+  try {
+    const data = await redisClient.get(key);
+    return data ? JSON.parse(data) : null;
+  } catch (err) {
+    console.error('Redis get error:', err);
+    return null;
+  }
+}
+
+async function setCache(key, value, expireSeconds = 300) {
+  if (!redisClient || !redisClient.isOpen) return;
+  try {
+    await redisClient.set(key, JSON.stringify(value), { EX: expireSeconds });
+  } catch (err) {
+    console.error('Redis set error:', err);
+  }
+}
+
+async function delCache(key) {
+  if (!redisClient || !redisClient.isOpen) return;
+  try {
+    await redisClient.del(key);
+  } catch (err) {
+    console.error('Redis del error:', err);
+  }
+}
+
+async function clearQuestionsCache() {
+  if (!redisClient || !redisClient.isOpen) return;
+  try {
+    let cursor = 0;
+    const pattern = 'questions:*';
+    let deletedCount = 0;
+    do {
+      const reply = await redisClient.scan(cursor, {
+        MATCH: pattern,
+        COUNT: 100
+      });
+      cursor = reply.cursor;
+      const keys = reply.keys;
+      if (keys.length) {
+        await redisClient.del(keys);
+        deletedCount += keys.length;
+      }
+    } while (cursor !== 0);
+
+    if (deletedCount > 0) {
+      console.log(`Cleared ${deletedCount} question cache keys`);
+    }
+
+    // 同时清除科目和题型缓存
+    await delCache('subjects');
+    await delCache('question-types');
+  } catch (err) {
+    console.error('Clear cache error:', err);
+  }
+}
 
 // ========== 配置 multer 图片上传 ==========
 const uploadDir = path.join(__dirname, 'uploads');
@@ -52,7 +124,6 @@ async function initDBPool() {
   try {
     let poolConfig;
     if (process.env.DATABASE_URL) {
-      // 使用 DATABASE_URL（Railway 自动注入）
       poolConfig = {
         uri: process.env.DATABASE_URL,
         ssl: { rejectUnauthorized: false },
@@ -69,7 +140,6 @@ async function initDBPool() {
         keepAliveInitialDelay: poolConfig.keepAliveInitialDelay
       });
     } else {
-      // 使用单独的环境变量
       poolConfig = {
         host: process.env.DB_HOST,
         user: process.env.DB_USER,
@@ -306,6 +376,8 @@ app.post('/api/admin/batch-import', authMiddleware, adminMiddleware, async (req,
     }
   });
   await Promise.all(promises);
+  // 批量导入后清除缓存
+  await clearQuestionsCache();
   res.json({ success: true, successCount, failCount });
 });
 
@@ -330,18 +402,28 @@ app.delete('/api/admin/users/:id', authMiddleware, adminMiddleware, async (req, 
 // ========== 题目接口 ==========
 app.get('/api/questions', async (req, res) => {
   const { subject, year, type, questionType } = req.query;
-  let sql = 'SELECT * FROM questions';
-  let params = [];
-  const conditions = [];
-  if (subject) { conditions.push(' subject = ?'); params.push(subject); }
-  if (year) { conditions.push(' year = ?'); params.push(year); }
-  if (type) { conditions.push(' type = ?'); params.push(type); }
-  if (questionType) { conditions.push(' question_type = ?'); params.push(questionType); }
-  if (conditions.length) sql += ' WHERE ' + conditions.join(' AND');
-  sql += ' ORDER BY id DESC';
+  const cacheKey = `questions:${subject || 'all'}:${year || 'all'}:${type || 'all'}:${questionType || 'all'}`;
   try {
+    let data = await getCache(cacheKey);
+    if (data) {
+      console.log(`Cache hit: ${cacheKey}`);
+      return res.json(data);
+    }
+
+    let sql = 'SELECT * FROM questions';
+    let params = [];
+    const conditions = [];
+    if (subject) { conditions.push(' subject = ?'); params.push(subject); }
+    if (year) { conditions.push(' year = ?'); params.push(year); }
+    if (type) { conditions.push(' type = ?'); params.push(type); }
+    if (questionType) { conditions.push(' question_type = ?'); params.push(questionType); }
+    if (conditions.length) sql += ' WHERE ' + conditions.join(' AND');
+    sql += ' ORDER BY id DESC';
+
     const [rows] = await dbPool.execute(sql, params);
-    res.json(rows.map(row => ({ ...row, options: row.options ? JSON.parse(row.options) : [] })));
+    data = rows.map(row => ({ ...row, options: row.options ? JSON.parse(row.options) : [] }));
+    await setCache(cacheKey, data, 300);
+    res.json(data);
   } catch (err) {
     console.error('❌ 查询题目失败:', err.stack);
     res.status(500).json({ error: err.message });
@@ -363,6 +445,8 @@ app.post('/api/questions', authMiddleware, adminMiddleware, async (req, res) => 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [year, type === '真题' ? questionIndex : null, subject, question, JSON.stringify(options), answer, analysis, difficulty, type || '真题', questionType || '单选题']
     );
+    // 插入成功后清除缓存
+    await clearQuestionsCache();
     res.json({ success: true, id: result.insertId });
   } catch (err) {
     console.error('❌ 添加题目失败:', err.stack);
@@ -373,6 +457,7 @@ app.post('/api/questions', authMiddleware, adminMiddleware, async (req, res) => 
 app.delete('/api/questions/:id', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     await dbPool.execute('DELETE FROM questions WHERE id = ?', [req.params.id]);
+    await clearQuestionsCache();
     res.json({ success: true });
   } catch (err) {
     console.error('❌ 删除题目失败:', err.stack);
@@ -386,6 +471,7 @@ app.delete('/api/questions/batch', authMiddleware, adminMiddleware, async (req, 
   try {
     const placeholders = ids.map(() => '?').join(',');
     const [result] = await dbPool.execute(`DELETE FROM questions WHERE id IN (${placeholders})`, ids);
+    await clearQuestionsCache();
     res.json({ success: true, deletedCount: result.affectedRows });
   } catch (err) {
     console.error('❌ 批量删除错误:', err.stack);
@@ -415,24 +501,37 @@ app.get('/api/user/errors/questions', async (req, res) => {
   }
 });
 
-// ========== 辅助接口 ==========
+// ========== 辅助接口（带缓存） ==========
 app.get('/api/subjects', async (req, res) => {
+  const cacheKey = 'subjects';
   try {
+    let subjects = await getCache(cacheKey);
+    if (subjects) return res.json(subjects);
+
     const [rows] = await dbPool.execute('SELECT DISTINCT subject FROM questions WHERE subject IS NOT NULL AND subject != ""');
-    res.json(rows.map(row => row.subject));
+    subjects = rows.map(row => row.subject);
+    await setCache(cacheKey, subjects, 600); // 10分钟过期
+    res.json(subjects);
   } catch (err) {
+    console.error('❌ 获取科目列表失败:', err.stack);
     res.status(500).json({ error: err.message });
   }
 });
 
 app.get('/api/question-types', async (req, res) => {
+  const cacheKey = 'question-types';
   try {
+    let types = await getCache(cacheKey);
+    if (types) return res.json(types);
+
     const [rows] = await dbPool.execute('SELECT DISTINCT question_type FROM questions WHERE question_type IS NOT NULL AND question_type != ""');
-    const types = rows.map(row => row.question_type);
+    types = rows.map(row => row.question_type);
     const defaultTypes = ['单选题', '多选题', '判断题', '填空题', '简答题'];
     const allTypes = [...new Set([...defaultTypes, ...types])];
+    await setCache(cacheKey, allTypes, 600);
     res.json(allTypes);
   } catch (err) {
+    console.error('❌ 获取题型列表失败:', err.stack);
     res.status(500).json({ error: err.message });
   }
 });
@@ -471,6 +570,7 @@ initDBPool().then(() => {
     console.log(`   - 题目支持题型分类（单选/多选/判断等）`);
     console.log(`   - 删除题目自动删除关联错题`);
     console.log(`   - 新增/api/question-types接口获取题型列表`);
+    console.log(`   - Redis 缓存已启用，提升查询性能`);
   });
 });
 
