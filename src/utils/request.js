@@ -6,7 +6,7 @@ const instance = axios.create({
   timeout: 10000,
 })
 
-// 请求拦截器
+// 请求拦截器：自动携带 token
 instance.interceptors.request.use(
   config => {
     const token = localStorage.getItem('token')
@@ -18,11 +18,11 @@ instance.interceptors.request.use(
   error => Promise.reject(error)
 )
 
-// 响应拦截器
+// 响应拦截器：统一处理错误和返回数据
 instance.interceptors.response.use(
-  response => response.data,
+  response => response.data,  // 直接返回 data
   error => {
-    // 处理网络错误（如断网、超时）
+    // 网络错误（断网、超时等）
     if (!error.response) {
       ElMessage.error('网络连接失败，请检查网络')
       return Promise.reject(error)
@@ -30,7 +30,7 @@ instance.interceptors.response.use(
 
     const { status, data } = error.response
 
-    // 根据状态码统一处理
+    // 根据状态码统一提示
     switch (status) {
       case 400:
         ElMessage.error(data?.error || '请求参数错误')

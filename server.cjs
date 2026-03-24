@@ -98,6 +98,7 @@ async function createTables() {
   await dbPool.execute(`CREATE TABLE IF NOT EXISTS questions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     year INT,
+    question_index INT NULL,               -- 新增：真题序号
     subject VARCHAR(255),
     question TEXT,
     options TEXT, -- 存储选择题选项（JSON格式）
@@ -304,48 +305,47 @@ app.post('/api/user/errors', authMiddleware, async (req, res) => {
 });
 
 // 获取用户错题列表（支持按科目/题型筛选）
-app.get('/api/user/errors', async (req, res) => {
-  const { userId, subject, questionType } = req.query
-  if (!userId) return res.status(400).json({ error: '缺少 userId' })
+app.get('/api/user/errors', authMiddleware, async (req, res) => {
+  const userId = req.user.id;   // 从 token 中获取
+  const { subject, questionType } = req.query;
 
   let sql = `
     SELECT e.*, q.question, q.options, q.answer AS correct_answer, q.analysis, q.year, q.difficulty, q.question_type
     FROM user_errors e
     JOIN questions q ON e.question_id = q.id
     WHERE e.user_id = ?
-  `
-  const params = [userId]
+  `;
+  const params = [userId];
   if (subject) {
-    sql += ' AND e.subject = ?'
-    params.push(subject)
+    sql += ' AND e.subject = ?';
+    params.push(subject);
   }
   if (questionType) {
-    sql += ' AND q.question_type = ?'
-    params.push(questionType)
+    sql += ' AND q.question_type = ?';
+    params.push(questionType);
   }
-  sql += ' ORDER BY e.create_time DESC'
+  sql += ' ORDER BY e.create_time DESC';
 
   try {
-    const [rows] = await dbPool.execute(sql, params)
+    const [rows] = await dbPool.execute(sql, params);
     rows.forEach(row => {
-      // 安全解析 options
       if (row.options) {
         try {
-          row.options = JSON.parse(row.options)
+          row.options = JSON.parse(row.options);
         } catch (e) {
-          console.error(`解析 options 失败: question_id=${row.question_id}, options=${row.options}`, e)
-          row.options = []  // 降级处理
+          console.error(`解析 options 失败: question_id=${row.question_id}, options=${row.options}`, e);
+          row.options = [];
         }
       } else {
-        row.options = []
+        row.options = [];
       }
-    })
-    res.json(rows)
+    });
+    res.json(rows);
   } catch (err) {
-    console.error('❌ 获取错题列表失败:', err.stack)
-    res.status(500).json({ error: err.message })
+    console.error('❌ 获取错题列表失败:', err.stack);
+    res.status(500).json({ error: err.message });
   }
-})
+});
 
 
 
@@ -474,28 +474,39 @@ app.get('/api/questions', async (req, res) => {
 
 // 新增题目：支持题型字段
 app.post('/api/questions', authMiddleware, adminMiddleware, async (req, res) => {
-  const { year, subject, question, options, answer, analysis, difficulty, type, questionType } = req.body
+  const { year, questionIndex, subject, question, options, answer, analysis, difficulty, type, questionType } = req.body;
   try {
+    // 如果是真题且提供了 questionIndex，检查同一年是否已存在相同序号
+    if (type === '真题' && questionIndex) {
+      const [existing] = await dbPool.execute(
+        'SELECT id FROM questions WHERE year = ? AND question_index = ?',
+        [year, questionIndex]
+      );
+      if (existing.length > 0) {
+        return res.status(400).json({ error: `该年份第${questionIndex}题已存在，请使用不同序号` });
+      }
+    }
     const [result] = await dbPool.execute(
-      `INSERT INTO questions (year, subject, question, options, answer, analysis, difficulty, type, question_type) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO questions (year, question_index, subject, question, options, answer, analysis, difficulty, type, question_type)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        year, 
-        subject, 
-        question, 
-        JSON.stringify(options), 
-        answer, 
-        analysis, 
-        difficulty, 
+        year,
+        type === '真题' ? questionIndex : null,
+        subject,
+        question,
+        JSON.stringify(options),
+        answer,
+        analysis,
+        difficulty,
         type || '真题',
-        questionType || '单选题' // 新增题型字段
+        questionType || '单选题'
       ]
-    )
-    res.json({ success: true, id: result.insertId })
+    );
+    res.json({ success: true, id: result.insertId });
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: err.message });
   }
-})
+});
 
 // 删除题目：自动删除关联的错题（外键级联）
 app.delete('/api/questions/:id', authMiddleware, adminMiddleware, async (req, res) => {

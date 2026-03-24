@@ -20,12 +20,22 @@
     </div>
     <div v-else class="list">
       <div v-for="item in displayList" :key="item.id" class="item">
-        <h4>{{ item.question }}</h4>
-        <p><strong>你的答案：</strong>{{ item.user_answer }}</p>
-        <p><strong>正确答案：</strong>{{ item.correct_answer }}</p>
-        <p><strong>解析：</strong>{{ item.analysis }}</p>
-        <button @click="removeError(item.id)" class="remove-btn">移除</button>
-      </div>
+  <h4>{{ item.question }}</h4>
+  <p><strong>你的答案：</strong>
+    <span v-if="item.question_type === '多选题'">
+      {{ item.user_answer.split('').join('、') }}
+    </span>
+    <span v-else>{{ item.user_answer }}</span>
+  </p>
+  <p><strong>正确答案：</strong>
+    <span v-if="item.question_type === '多选题'">
+      {{ item.correct_answer.split('').join('、') }}
+    </span>
+    <span v-else>{{ item.correct_answer }}</span>
+  </p>
+  <p><strong>解析：</strong>{{ item.analysis }}</p>
+  <button @click="removeError(item.id)" class="remove-btn">移除</button>
+</div>
     </div>
 
     <button @click="goBack" class="back-btn">返回首页</button>

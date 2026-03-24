@@ -1,5 +1,25 @@
-# Vue 3 + Vite
+# 408计算机专业刷题系统
 
-This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+基于 Vue 3 + Node.js + MySQL 的在线刷题平台，支持单选题、多选题、简答题，包含真题管理、错题本、模拟考试、个人统计等功能。
 
-Learn more about IDE Support for Vue in the [Vue Docs Scaling up Guide](https://vuejs.org/guide/scaling-up/tooling.html#ide-support).
+## 技术栈
+
+- **前端**：Vue 3 (Composition API) + Vite + Vue Router + ECharts + Axios
+- **后端**：Node.js + Express + JWT + bcrypt + multer
+- **数据库**：MySQL (支持外键级联删除)
+
+## 主要功能
+
+- 多题型支持（单选/多选/简答），动态渲染选项与答案输入
+- 真题序号管理，删除题目不影响同一年其他题目序号
+- 错题本自动记录错题，支持按科目筛选和错题练习模式
+- 限时真题模拟考试（40道单选题，90分钟，满分80分）
+- 管理员后台：添加/批量导入题目，支持图片上传，用户管理
+- 个人中心：编辑资料、头像上传、刷题统计（图表可视化）
+
+## 快速开始
+
+### 环境要求
+
+- Node.js
+- MySQL 8.0+

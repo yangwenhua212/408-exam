@@ -38,25 +38,19 @@
           </div>
         </div>
 
-        <!-- 第二行：年份/科目/难度 -->
-        <div class="form-row">
-          <div class="form-group" v-if="singleForm.type === '真题'">
+        <!-- 真题特有：年份 + 题号 -->
+        <div class="form-row" v-if="singleForm.type === '真题'">
+          <div class="form-group">
             <label>年份</label>
             <select v-model="singleForm.year">
               <option v-for="year in yearList" :key="year" :value="year">{{ year }}年</option>
             </select>
           </div>
-
-          <div class="form-group" v-if="singleForm.type === '自定义题'">
-            <label>科目</label>
-            <select v-model="singleForm.subject">
-              <option value="数据结构">数据结构</option>
-              <option value="计算机组成原理">计算机组成原理</option>
-              <option value="操作系统">操作系统</option>
-              <option value="计算机网络">计算机网络</option>
-            </select>
+          <div class="form-group">
+            <label>题号</label>
+            <input type="number" v-model="singleForm.questionIndex" placeholder="例如 1" min="1" />
+            <span class="tip">同一年的题号必须唯一，不可重复</span>
           </div>
-
           <div class="form-group">
             <label>难度</label>
             <select v-model="singleForm.difficulty">
@@ -67,12 +61,35 @@
           </div>
         </div>
 
-        <!-- 第三行：题型 -->
-        <div class="form-row" style="grid-template-columns: 1fr;">
+        <!-- 自定义题：科目选择 + 难度 -->
+        <div class="form-row" v-if="singleForm.type === '自定义题'">
+          <div class="form-group">
+            <label>科目</label>
+            <select v-model="singleForm.subject">
+              <option value="数据结构">数据结构</option>
+              <option value="计算机组成原理">计算机组成原理</option>
+              <option value="操作系统">操作系统</option>
+              <option value="计算机网络">计算机网络</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>难度</label>
+            <select v-model="singleForm.difficulty">
+              <option value="简单">简单</option>
+              <option value="中等">中等</option>
+              <option value="困难">困难</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 题型选择 -->
+        <div class="form-row">
           <div class="form-group full-width">
             <label>题型</label>
-            <select v-model="singleForm.questionType">
-              <option v-for="type in questionTypes" :key="type" :value="type">{{ type }}</option>
+            <select v-model="singleForm.questionType" @change="onQuestionTypeChange">
+              <option value="单选题">单选题</option>
+              <option value="多选题">多选题</option>
+              <option value="简答题">简答题</option>
             </select>
           </div>
         </div>
@@ -102,8 +119,8 @@
           >
         </div>
 
-        <!-- 选项 -->
-        <div class="options-row">
+        <!-- 选项区域（仅单选题/多选题显示） -->
+        <div class="options-row" v-if="['单选题','多选题'].includes(singleForm.questionType)">
           <div class="form-group">
             <label>选项A</label>
             <input v-model="singleForm.optionA" placeholder="选项A内容">
@@ -122,16 +139,26 @@
           </div>
         </div>
 
-        <!-- 正确答案 -->
+        <!-- 答案区域 -->
         <div class="form-row">
           <div class="form-group">
             <label>正确答案</label>
-            <select v-model="singleForm.answer">
+            <!-- 单选题：下拉选择 -->
+            <select v-if="singleForm.questionType === '单选题'" v-model="singleForm.answer">
               <option value="A">A</option>
               <option value="B">B</option>
               <option value="C">C</option>
               <option value="D">D</option>
             </select>
+            <!-- 多选题：复选框组 -->
+            <div v-else-if="singleForm.questionType === '多选题'" class="checkbox-group">
+              <label><input type="checkbox" value="A" v-model="singleForm.multiAnswer"> A</label>
+              <label><input type="checkbox" value="B" v-model="singleForm.multiAnswer"> B</label>
+              <label><input type="checkbox" value="C" v-model="singleForm.multiAnswer"> C</label>
+              <label><input type="checkbox" value="D" v-model="singleForm.multiAnswer"> D</label>
+            </div>
+            <!-- 简答题：文本输入 -->
+            <textarea v-else-if="singleForm.questionType === '简答题'" v-model="singleForm.answer" placeholder="参考答案（文本）" rows="3"></textarea>
           </div>
         </div>
 
@@ -207,9 +234,14 @@
             <input type="checkbox" class="item-checkbox" v-model="selectedIds" :value="q.id">
             <div class="item-content">
               <div class="item-header">
-                <span class="item-tag">
-                  {{ q.year ? q.year + '年 | ' : '' }}{{ q.subject }} | {{ q.type }} | {{ q.question_type || '单选题' }}
-                </span>
+                <!-- 修改后的标签，显示年份、题号（如果有）、科目、题型 -->
+<span class="item-tag">
+  {{ q.year ? q.year + '年' : '' }}
+  {{ (q.question_index && q.question_index > 0) ? ' 第' + q.question_index + '题' : '' }}
+  {{ q.subject ? ' | ' + q.subject : '' }}
+  {{ q.type ? ' | ' + q.type : '' }}
+  {{ q.question_type ? ' | ' + q.question_type : '' }}
+</span>
                 <button @click="deleteQuestion(q.id)" class="btn-delete">删除</button>
               </div>
               <div class="item-question" v-html="q.question"></div>
@@ -238,9 +270,9 @@
                 <div class="user-name">{{ user.username }}</div>
                 <div class="user-meta">
                   <span>注册时间：{{ user.registerTime }}</span>
-                  <span v-if="user.phone">📱 {{ user.phone }}</span>
+                  <span v-if="user.phone">{{ user.phone }}</span>
                   <span v-if="user.qq">QQ：{{ user.qq }}</span>
-                  <span v-if="user.location">📍 {{ user.location }}</span>
+                  <span v-if="user.location">{{ user.location }}</span>
                 </div>
                 <div class="user-bio" v-if="user.bio">{{ user.bio }}</div>
               </div>
@@ -296,26 +328,33 @@ const currentTab = ref('single')
 const singleForm = reactive({
   type: '真题',
   year: 2025,
+  questionIndex: null,        // 真题序号
   subject: '数据结构',
   question: '',
   optionA: '',
   optionB: '',
   optionC: '',
   optionD: '',
-  answer: 'A',
+  answer: 'A',                // 单选题答案/简答题答案/多选题答案字符串
+  multiAnswer: [],            // 临时存储多选题选中的字母
   difficulty: '简单',
   analysis: '',
   questionType: '单选题'
-})
+});
 
-// 切换题目类型
-const onTypeChange = () => {
-  if (singleForm.type === '真题') {
-    singleForm.subject = ''
-  } else {
-    singleForm.year = 2025
+// 当题型变化时，重置答案字段
+const onQuestionTypeChange = () => {
+  if (singleForm.questionType === '单选题') {
+    singleForm.answer = 'A';
+    singleForm.multiAnswer = [];
+  } else if (singleForm.questionType === '多选题') {
+    singleForm.multiAnswer = [];
+    singleForm.answer = '';   // 稍后组装
+  } else if (singleForm.questionType === '简答题') {
+    singleForm.answer = '';
+    singleForm.multiAnswer = [];
   }
-}
+};
 
 // 批量导入
 const batchText = ref('')
@@ -423,42 +462,66 @@ onMounted(() => {
   loadUserList()
 })
 
-// 添加单题
+
+
 const addSingleQuestion = async () => {
-  if (!singleForm.question || !singleForm.optionA) {
-    alert('请填写完整题目和选项');
+
+  // 如果选择的是真题，则题号必须为正整数
+if (singleForm.type === '真题') {
+  if (!singleForm.questionIndex || singleForm.questionIndex <= 0 || !Number.isInteger(Number(singleForm.questionIndex))) {
+    alert('真题必须填写题号，且题号为正整数！');
     return;
   }
-  
+}
+  // 校验...
+  if (!singleForm.question) {
+    alert('请填写题干');
+    return;
+  }
+
+  // 处理答案
+  let finalAnswer = singleForm.answer;
+  if (singleForm.questionType === '多选题') {
+    finalAnswer = singleForm.multiAnswer.sort().join(''); // 如 "AB"
+    if (!finalAnswer) {
+      alert('请至少选择一个正确答案');
+      return;
+    }
+  } else if (singleForm.questionType === '单选题' && !finalAnswer) {
+    alert('请选择正确答案');
+    return;
+  } else if (singleForm.questionType === '简答题' && !finalAnswer) {
+    alert('请填写参考答案');
+    return;
+  }
+
   const question = {
     year: singleForm.type === '真题' ? singleForm.year : null,
+    questionIndex: singleForm.type === '真题' ? singleForm.questionIndex : null,
     subject: singleForm.type === '自定义题' ? singleForm.subject : '',
     question: singleForm.question,
-    options: [
-      'A. ' + singleForm.optionA,
-      'B. ' + singleForm.optionB,
-      'C. ' + singleForm.optionC,
-      'D. ' + singleForm.optionD
-    ],
-    answer: singleForm.answer,
+    options: (singleForm.questionType === '单选题' || singleForm.questionType === '多选题')
+      ? ['A. ' + singleForm.optionA, 'B. ' + singleForm.optionB, 'C. ' + singleForm.optionC, 'D. ' + singleForm.optionD]
+      : [],
+    answer: finalAnswer,
     analysis: singleForm.analysis,
     difficulty: singleForm.difficulty,
     type: singleForm.type,
     questionType: singleForm.questionType
   };
-  
+
   try {
     await request.post('/questions', question);
-    alert('✅ 添加成功！');
+    alert('添加成功！');
+    // 重置表单...
     singleForm.question = '';
-    singleForm.optionA = '';
-    singleForm.optionB = '';
-    singleForm.optionC = '';
-    singleForm.optionD = '';
+    singleForm.optionA = singleForm.optionB = singleForm.optionC = singleForm.optionD = '';
     singleForm.analysis = '';
+    singleForm.multiAnswer = [];
+    singleForm.answer = 'A';
     loadQuestionList();
   } catch (err) {
-    alert('添加失败');
+    alert('添加失败：' + (err.response?.data?.error || err.message));
   }
 };
 
@@ -468,7 +531,7 @@ const batchImport = async () => {
     const questions = JSON.parse(batchText.value);
     const result = await request.post('/admin/batch-import', questions);
     importResult.value = result;
-    alert(`✅ 导入完成！成功：${result.successCount} 题`);
+    alert(`导入完成！成功：${result.successCount} 题`);
     batchText.value = '';
     loadQuestionList();
   } catch (err) {
@@ -481,7 +544,7 @@ const deleteQuestion = async (id) => {
   if (!confirm('确定要删除这道题吗？')) return;
   try {
     await request.delete(`/questions/${id}`);
-    alert('✅ 删除成功');
+    alert('删除成功');
     loadQuestionList();
   } catch (err) {
     alert('删除失败');
@@ -495,7 +558,7 @@ const batchDelete = async () => {
 
   try {
     const result = await request.delete('/questions/batch', { data: { ids: selectedIds.value } });
-    alert(`✅ 成功删除 ${result.deletedCount} 道题目`);
+    alert(`成功删除 ${result.deletedCount} 道题目`);
     selectedIds.value = [];
     await loadQuestionList();
   } catch (err) {
@@ -518,7 +581,7 @@ const deleteUser = async (id) => {
   if (!confirm('确定要删除该用户吗？此操作不可恢复！')) return;
   try {
     await request.delete(`/admin/users/${id}`);
-    alert('✅ 用户删除成功');
+    alert('用户删除成功');
     loadUserList();
   } catch (err) {
     alert('删除失败');
@@ -543,13 +606,13 @@ const handleImageUpload = async (e) => {
       if (imageInput.value) {
         imageInput.value.value = '';
       }
-      alert('✅ 图片上传成功！已自动插入到题干中～');
+      alert('图片上传成功！已自动插入到题干中～');
     } else {
-      alert('❌ 上传失败：' + data.error);
+      alert('上传失败：' + data.error);
     }
   } catch (err) {
     console.error('上传出错：', err);
-    alert('❌ 上传失败！请检查后端服务是否启动～');
+    alert('上传失败！请检查后端服务是否启动～');
   }
 };
 

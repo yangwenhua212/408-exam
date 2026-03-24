@@ -25,20 +25,25 @@
       <div class="question-card">
         <!-- 题目信息 -->
         <div class="question-header">
-          <span class="question-tag">{{ currentQuestion.year }}年 | {{ currentQuestion.subject }}</span>
+          <span class="question-tag">
+            {{ currentQuestion.year }}年
+            <span v-if="currentQuestion.question_index">第{{ currentQuestion.question_index }}题</span>
+            <span v-else>第{{ currentIndex + 1 }}题</span>
+            | {{ currentQuestion.subject }}
+          </span>
           <span class="question-difficulty">难度：{{ currentQuestion.difficulty }}</span>
         </div>
 
         <!-- 题干 -->
         <div class="question-content">
-          <h2>{{ currentIndex + 1 }}. {{ currentQuestion.question }}</h2>
+          <h2>{{ currentQuestion.question }}</h2>
         </div>
 
-        <!-- 选项列表 -->
-        <div class="options-list">
+        <!-- 动态区域：根据题型渲染 -->
+        <div v-if="currentQuestion.question_type === '单选题'" class="options-list">
           <div
-            v-for="(option, index) in currentQuestion.options"
-            :key="index"
+            v-for="(option, idx) in currentQuestion.options"
+            :key="idx"
             class="option-item"
             :class="{
               'selected': userAnswer === option.charAt(0),
@@ -52,10 +57,37 @@
           </div>
         </div>
 
+        <div v-else-if="currentQuestion.question_type === '多选题'" class="options-list">
+          <div
+            v-for="(option, idx) in currentQuestion.options"
+            :key="idx"
+            class="option-item"
+            :class="{
+              'selected': userMultiAnswer.includes(option.charAt(0)),
+              'correct': isSubmitted && currentQuestion.answer.split('').includes(option.charAt(0)),
+              'wrong': isSubmitted && userMultiAnswer.includes(option.charAt(0)) && !currentQuestion.answer.split('').includes(option.charAt(0))
+            }"
+            @click="toggleMultiAnswer(option.charAt(0))"
+            :disabled="isSubmitted"
+          >
+            {{ option }}
+          </div>
+        </div>
+
+        <div v-else-if="currentQuestion.question_type === '简答题'" class="short-answer">
+          <textarea
+            v-model="userShortAnswer"
+            class="short-answer-input"
+            rows="4"
+            placeholder="请输入你的答案..."
+            :disabled="isSubmitted"
+          ></textarea>
+        </div>
+
         <!-- 答案解析（提交后显示） -->
         <div class="analysis-box" v-if="isSubmitted">
           <div class="analysis-header">
-            <h3>正确答案：{{ currentQuestion.answer }}</h3>
+            <h3>正确答案：{{ formatCorrectAnswer(currentQuestion) }}</h3>
           </div>
           <div class="analysis-content">
             <strong>解析：</strong>{{ currentQuestion.analysis }}
@@ -68,7 +100,7 @@
           <button
             v-if="!isSubmitted"
             @click="submitAnswer"
-            :disabled="!userAnswer"
+            :disabled="!canSubmit"
             class="btn-primary"
           >
             提交答案
@@ -111,19 +143,62 @@ const showSubjectFilter = computed(() => mode.value !== 'error')
 // 核心数据
 const questionList = ref([])
 const currentIndex = ref(0)
-const userAnswer = ref('')
+const userAnswer = ref('')           // 单选题答案
+const userMultiAnswer = ref([])      // 多选题答案数组
+const userShortAnswer = ref('')      // 简答题答案
 const isSubmitted = ref(false)
 const selectedSubject = ref('')
 const subjects = ref([])
 const loading = ref(false)
 
 // 计算当前题目
-const currentQuestion = computed(() => {
-  return questionList.value[currentIndex.value] || {}
+const currentQuestion = computed(() => questionList.value[currentIndex.value] || {})
+
+// 判断是否可以提交（根据题型检查答案是否填写）
+const canSubmit = computed(() => {
+  const type = currentQuestion.value.question_type
+  if (type === '单选题') return userAnswer.value !== ''
+  if (type === '多选题') return userMultiAnswer.value.length > 0
+  if (type === '简答题') return userShortAnswer.value.trim() !== ''
+  return false
 })
 
+// ---------- 辅助函数 ----------
+const formatCorrectAnswer = (question) => {
+  if (question.question_type === '多选题') {
+    return question.answer.split('').join('、')
+  }
+  return question.answer
+}
+
+// 获取当前题目的用户答案（用于提交错题本）
+const getUserAnswer = () => {
+  const type = currentQuestion.value.question_type
+  if (type === '单选题') return userAnswer.value
+  if (type === '多选题') return userMultiAnswer.value.sort().join('')
+  if (type === '简答题') return userShortAnswer.value.trim()
+  return ''
+}
+
+// 判断答案是否正确
+const isAnswerCorrect = () => {
+  const userAns = getUserAnswer()
+  const correctAns = currentQuestion.value.answer
+  const type = currentQuestion.value.question_type
+  if (type === '多选题') {
+    // 标准化比较：排序后字符串
+    const userSorted = userAns.split('').sort().join('')
+    const correctSorted = correctAns.split('').sort().join('')
+    return userSorted === correctSorted
+  } else if (type === '简答题') {
+    // 简单比较，可忽略大小写和前后空格
+    return userAns.toLowerCase() === correctAns.toLowerCase()
+  } else {
+    return userAns === correctAns
+  }
+}
+
 // ---------- 数据加载 ----------
-// 加载科目列表（仅普通模式需要，但为了简单始终加载，不影响错题模式）
 const loadSubjects = async () => {
   try {
     const res = await fetch('/api/subjects')
@@ -131,18 +206,15 @@ const loadSubjects = async () => {
     subjects.value = await res.json()
   } catch (err) {
     console.error(err)
-    // 降级为默认科目
     subjects.value = ['数据结构', '计算机组成原理', '操作系统', '计算机网络']
   }
 }
 
-// 加载题目
 const loadQuestions = async () => {
   loading.value = true
   try {
     let url
     if (mode.value === 'error') {
-      // 错题模式：需要用户ID
       if (!userStore.user?.id) {
         alert('请先登录')
         router.push('/login')
@@ -150,7 +222,6 @@ const loadQuestions = async () => {
       }
       url = `/api/user/errors/questions?userId=${userStore.user.id}`
     } else {
-      // 普通模式
       url = '/api/questions?type=自定义题'
       if (selectedSubject.value) {
         url += `&subject=${encodeURIComponent(selectedSubject.value)}`
@@ -161,8 +232,7 @@ const loadQuestions = async () => {
     questionList.value = await res.json()
     // 重置状态
     currentIndex.value = 0
-    userAnswer.value = ''
-    isSubmitted.value = false
+    resetQuestionState()
   } catch (err) {
     console.error(err)
     alert('题目加载失败，请稍后重试')
@@ -171,8 +241,15 @@ const loadQuestions = async () => {
   }
 }
 
+// 重置当前题目的所有答案和提交状态
+const resetQuestionState = () => {
+  userAnswer.value = ''
+  userMultiAnswer.value = []
+  userShortAnswer.value = ''
+  isSubmitted.value = false
+}
+
 // ---------- 路由同步 ----------
-// 从 URL 初始化科目（仅普通模式有效，错题模式不监听）
 watch(
   () => route.query.subject,
   (newSubject) => {
@@ -183,7 +260,6 @@ watch(
   { immediate: true }
 )
 
-// 科目变化时重新加载题目（仅普通模式）
 watch(selectedSubject, (newVal) => {
   if (mode.value !== 'error') {
     router.replace({ query: { subject: newVal || undefined } })
@@ -191,7 +267,6 @@ watch(selectedSubject, (newVal) => {
   }
 })
 
-// 监听 mode 变化（例如从错题本跳转时），重新加载题目
 watch(mode, () => {
   loadQuestions()
 })
@@ -202,9 +277,20 @@ const selectOption = (optionKey) => {
   userAnswer.value = optionKey
 }
 
+const toggleMultiAnswer = (optionKey) => {
+  if (isSubmitted.value) return
+  const idx = userMultiAnswer.value.indexOf(optionKey)
+  if (idx === -1) {
+    userMultiAnswer.value.push(optionKey)
+  } else {
+    userMultiAnswer.value.splice(idx, 1)
+  }
+}
+
 const submitAnswer = () => {
+  if (!canSubmit.value) return
   isSubmitted.value = true
-  if (userAnswer.value !== currentQuestion.value.answer) {
+  if (!isAnswerCorrect()) {
     addToErrorBook()
   }
 }
@@ -224,36 +310,31 @@ const nextQuestion = () => {
   resetQuestionState()
 }
 
-const resetQuestionState = () => {
-  userAnswer.value = ''
-  isSubmitted.value = false
-}
-
 // ---------- 错题本（对接后端）----------
 const addToErrorBook = async () => {
-  if (mode.value === 'error') return;
-  if (!userStore.user?.id) return; // 可选，实际后端会通过 token 验证
+  if (mode.value === 'error') return
+  if (!userStore.user?.id) return
   try {
     await request.post('/user/errors', {
       questionId: currentQuestion.value.id,
       subject: currentQuestion.value.subject,
-      userAnswer: userAnswer.value
-    });
+      userAnswer: getUserAnswer()
+    })
   } catch (err) {
-    console.error('保存错题失败', err);
+    console.error('保存错题失败', err)
   }
-};
+}
+
 // ---------- 初始化 ----------
 onMounted(async () => {
   await loadSubjects()
-  await loadQuestions() // 根据当前 mode 加载题目
+  await loadQuestions()
 })
 </script>
 
 <style scoped>
 .exam-container {
   min-height: 100vh;
-  /* 统一淡蓝渐变 */
   background: linear-gradient(135deg, #d6f4ff 0%, #a8dfff 100%);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   display: flex;
@@ -284,7 +365,6 @@ onMounted(async () => {
   font-weight: 500;
   color: #2d3748;
 }
-/* 筛选器样式 */
 .filter-group {
   display: flex;
   gap: 1rem;
@@ -297,7 +377,6 @@ onMounted(async () => {
   font-size: 0.95rem;
   outline: none;
   cursor: pointer;
-  transition: border-color 0.3s ease;
 }
 .filter-select:focus {
   border-color: #2b6cb0;
@@ -374,6 +453,28 @@ onMounted(async () => {
   background: #fff5f5;
 }
 .option-item:disabled {
+  cursor: not-allowed;
+}
+/* 简答题输入框 */
+.short-answer {
+  margin-bottom: 2rem;
+}
+.short-answer-input {
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  resize: vertical;
+  box-sizing: border-box;
+}
+.short-answer-input:focus {
+  border-color: #2b6cb0;
+  outline: none;
+}
+.short-answer-input:disabled {
+  background: #f7fafc;
   cursor: not-allowed;
 }
 /* 解析框 */
