@@ -629,18 +629,18 @@ app.get(/^(?!\/api).*/, (req, res) => {
 })
 
 // ---------------- 启动服务 ----------------
-const PORT = process.env.PORT || 3000
+const PORT = process.env.PORT || 3000;
 initDBPool().then(() => {
-  app.listen(PORT, () => {
-    console.log(`\n🚀 后端服务已成功启动！`)
-    console.log(`📚 刷题系统主站：http://localhost:${PORT}`)
-    console.log(`🔐 管理员后台：http://localhost:${PORT}/admin`)
-    console.log(`👤 默认管理员账号：admin / 密码：123456\n`)
-    console.log(`🔍 新增功能：`)
-    console.log(`   - 题目支持题型分类（单选/多选/判断等）`)
-    console.log(`   - 删除题目自动删除关联错题`)
-    console.log(`   - 新增/api/question-types接口获取题型列表`)
-  })
-})
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`\n🚀 后端服务已成功启动！`);
+    console.log(`📚 刷题系统主站：http://localhost:${PORT}`);
+    console.log(`🔐 管理员后台：http://localhost:${PORT}/admin`);
+    console.log(`👤 默认管理员账号：admin / 密码：123456\n`);
+    console.log(`🔍 新增功能：`);
+    console.log(`   - 题目支持题型分类（单选/多选/判断等）`);
+    console.log(`   - 删除题目自动删除关联错题`);
+    console.log(`   - 新增/api/question-types接口获取题型列表`);
+  });
+});
 
 module.exports = app
