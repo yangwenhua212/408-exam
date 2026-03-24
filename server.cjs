@@ -21,14 +21,17 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-// ========== Redis 客户端初始化 ==========
-let redisClient = null;
-if (process.env.REDIS_URL) {
-  redisClient = redis.createClient({ url: process.env.REDIS_URL });
+// 尝试多个可能的 Redis URL 环境变量
+console.log('Redis env vars:', Object.keys(process.env).filter(k => k.includes('REDIS')));
+const redisUrl = process.env.REDIS_URL || process.env.REDIS_PUBLIC_URL || process.env.REDISCLOUD_URL;
+console.log('Redis URL found:', redisUrl ? 'yes' : 'no');  // 调试输出
+
+if (redisUrl) {
+  redisClient = redis.createClient({ url: redisUrl });
   redisClient.on('error', (err) => console.error('Redis Client Error', err));
   redisClient.connect().then(() => console.log('✅ Redis 连接成功')).catch(console.error);
 } else {
-  console.log('⚠️ 未设置 REDIS_URL，将不使用缓存');
+  console.log('⚠️ 未设置 REDIS_URL 等变量，将不使用缓存');
 }
 
 // ========== 缓存工具函数 ==========
